@@ -9,6 +9,16 @@
 
 Distributed system for cracking MD5 hashes
 
+## Architecture
+
+### Users
+
+![architecture](.assets/arch-users.png)
+
+### Developers
+
+![architecture](.assets/arch-developers.png)
+
 ## Quickstart
 
 ### Requirements
@@ -29,7 +39,7 @@ git clone https://github.com/ptrvsrg/crack-hash.git
 #### Docker
 
 ```bash
-docker compose up -d --force-recreate --build
+docker compose -f ./deploy/docker/docker-compose.stable.yaml up -d --force-recreate --build
 ```
 
 #### Manually

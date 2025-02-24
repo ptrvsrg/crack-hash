@@ -3,6 +3,7 @@ package chunkbased_test
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/ptrvsrg/crack-hash/commonlib/logging"
 	"github.com/ptrvsrg/crack-hash/worker/internal/service/infrastructure/bruteforce/chunkbased"
@@ -19,9 +20,12 @@ func Benchmark(b *testing.B) {
 	maxLength := 5
 
 	for i := 0; i < b.N; i++ {
-		_, err := svc.BruteForceMD5(hash, strings.Split(alphabet, ""), maxLength, 0)
+		ch, err := svc.BruteForceMD5(hash, strings.Split(alphabet, ""), maxLength, 0, time.Second)
 		if err != nil {
 			b.Fatal(err)
+		}
+
+		for range ch {
 		}
 	}
 }

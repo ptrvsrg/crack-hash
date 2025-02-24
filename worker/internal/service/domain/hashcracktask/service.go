@@ -2,50 +2,28 @@ package hashcracktask
 
 import (
 	"context"
-	"errors"
-	"fmt"
+	"time"
 
-	jobqueue "github.com/dirkaholic/kyoo"
-	"github.com/gin-gonic/gin"
-	"github.com/go-http-utils/headers"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/samber/lo"
-	"resty.dev/v3"
 
-	managermodel "github.com/ptrvsrg/crack-hash/manager/pkg/model"
-	"github.com/ptrvsrg/crack-hash/worker/config"
+	"github.com/ptrvsrg/crack-hash/commonlib/bus/amqp/publisher"
+	"github.com/ptrvsrg/crack-hash/manager/pkg/message"
 	"github.com/ptrvsrg/crack-hash/worker/internal/service/domain"
 	"github.com/ptrvsrg/crack-hash/worker/internal/service/infrastructure"
-	workermodel "github.com/ptrvsrg/crack-hash/worker/pkg/model"
 )
 
-type job struct {
-	handler func()
-}
-
-func newJob(handler func()) *job {
-	return &job{
-		handler: handler,
-	}
-}
-
-func (j *job) Process() {
-	j.handler()
-}
-
 type svc struct {
-	logger     zerolog.Logger
-	cfg        config.ManagerConfig
-	client     *resty.Client
-	jobQueue   *jobqueue.JobQueue
-	bruteforce infrastructure.HashBruteForce
+	logger         zerolog.Logger
+	progressPeriod time.Duration
+	publisher      publisher.Publisher[message.HashCrackTaskResult]
+	bruteforce     infrastructure.HashBruteForce
 }
 
 func NewService(
-	cfg config.ManagerConfig,
-	client *resty.Client,
-	jobQueue *jobqueue.JobQueue,
+	progressPeriod time.Duration,
+	publisher publisher.Publisher[message.HashCrackTaskResult],
 	bruteforce infrastructure.HashBruteForce,
 ) domain.HashCrackTask {
 	return &svc{
@@ -53,67 +31,57 @@ func NewService(
 			Str("type", "domain").
 			Str("service", "hash-crack-task").
 			Logger(),
-		cfg:        cfg,
-		client:     client,
-		jobQueue:   jobQueue,
-		bruteforce: bruteforce,
+		progressPeriod: progressPeriod,
+		publisher:      publisher,
+		bruteforce:     bruteforce,
 	}
 }
 
-func (s *svc) ExecuteTask(ctx context.Context, input *workermodel.HashCrackTaskInput) error {
+func (s *svc) ExecuteTask(ctx context.Context, input *message.HashCrackTaskStarted) error {
 	s.logger.Info().
 		Str("id", input.RequestID).
 		Int("part", input.PartNumber).
 		Msg("start brute force md5")
 
-	s.jobQueue.Submit(
-		newJob(func() { s.executeTask(ctx, input) }),
-	)
+	go s.executeTask(ctx, input)
 
 	return nil
 }
 
-func (s *svc) executeTask(ctx context.Context, input *workermodel.HashCrackTaskInput) {
+func (s *svc) executeTask(ctx context.Context, input *message.HashCrackTaskStarted) {
 	// Brute force
 	s.logger.Info().
 		Str("id", input.RequestID).
 		Int("part", input.PartNumber).
 		Msg("brute force md5")
 
-	answers, err := s.bruteforce.BruteForceMD5(input.Hash, input.Alphabet.Symbols, input.MaxLength, input.PartNumber)
+	progressCh, err := s.bruteforce.BruteForceMD5(
+		input.Hash, input.Alphabet.Symbols, input.MaxLength, input.PartNumber, s.progressPeriod,
+	)
 	if err != nil {
 		s.logger.Error().Err(err).Stack().Msg("failed to brute force md5")
-		err = fmt.Errorf("failed to brute force md5: %w", err) // nolint
-	}
 
-	// Send result
-	s.logger.Debug().Msg("send result webhook")
+		msg := buildErrorResultMessage(input.RequestID, input.PartNumber, lo.ToPtr(err.Error()))
+		if err := s.publisher.SendMessage(ctx, msg, publisher.Persistent, false, false); err != nil {
+			s.logger.Error().Err(err).Stack().Msg("failed to send result message")
+		}
 
-	webhookInput := &managermodel.HashCrackTaskWebhookInput{}
-	webhookErrOutput := &workermodel.ErrorOutput{}
-
-	if err == nil {
-		webhookInput = buildSuccessWebhookRequest(input.RequestID, input.PartNumber, answers)
-	} else {
-		webhookInput = buildErrorWebhookRequest(input.RequestID, input.PartNumber, err.Error())
-	}
-
-	url := fmt.Sprintf("%s/internal/api/manager/hash/crack/webhook", s.cfg.Address)
-	resp, err := s.client.R().
-		SetHeader(headers.ContentType, gin.MIMEXML).
-		SetContext(ctx).
-		SetBody(webhookInput).
-		SetError(webhookErrOutput).
-		Post(url)
-
-	if err != nil {
-		s.logger.Error().Err(err).Stack().Msg("failed to send result webhook")
 		return
 	}
 
-	if resp.IsError() {
-		err = errors.New(webhookErrOutput.Message) // nolint
-		s.logger.Error().Err(err).Stack().Msg("failed to execute task")
+	for progress := range progressCh {
+		// Send result
+		var msg *message.HashCrackTaskResult
+		if progress.Status == infrastructure.TaskStatusError {
+			msg = buildErrorResultMessage(input.RequestID, input.PartNumber, progress.Reason)
+		} else {
+			msg = buildResultMessage(input.RequestID, input.PartNumber, progress)
+		}
+
+		if err := s.publisher.SendMessage(ctx, msg, publisher.Persistent, false, false); err != nil {
+			s.logger.Error().Err(err).Stack().Msg("failed to send result message")
+			return
+		}
 	}
 
 	s.logger.Info().
@@ -122,26 +90,25 @@ func (s *svc) executeTask(ctx context.Context, input *workermodel.HashCrackTaskI
 		Msg("end brute force md5")
 }
 
-func buildErrorWebhookRequest(
-	requestID string, partNumber int, error string,
-) *managermodel.HashCrackTaskWebhookInput {
-
-	return &managermodel.HashCrackTaskWebhookInput{
+func buildErrorResultMessage(requestID string, partNumber int, error *string) *message.HashCrackTaskResult {
+	return &message.HashCrackTaskResult{
 		RequestID:  requestID,
 		PartNumber: partNumber,
-		Error:      lo.ToPtr(error),
+		Error:      error,
+		Status:     string(infrastructure.TaskStatusError),
 	}
 }
 
-func buildSuccessWebhookRequest(
-	requestID string, partNumber int, answers []string,
-) *managermodel.HashCrackTaskWebhookInput {
-
-	return &managermodel.HashCrackTaskWebhookInput{
+func buildResultMessage(
+	requestID string, partNumber int, progress infrastructure.TaskProgress,
+) *message.HashCrackTaskResult {
+	return &message.HashCrackTaskResult{
 		RequestID:  requestID,
 		PartNumber: partNumber,
-		Answer: &managermodel.Answer{
-			Words: answers,
+		Status:     string(progress.Status),
+		Answer: &message.Answer{
+			Words:   progress.Answers,
+			Percent: progress.Percent,
 		},
 	}
 }

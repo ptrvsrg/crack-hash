@@ -203,50 +203,6 @@ const docTemplate = `{
                     }
                 }
             }
-        },
-        "/internal/api/manager/hash/crack/webhook": {
-            "post": {
-                "description": "Request for getting status of hash crack task",
-                "consumes": [
-                    "application/xml"
-                ],
-                "produces": [
-                    "application/xml"
-                ],
-                "tags": [
-                    "Hash Crack API"
-                ],
-                "summary": "Get status of hash crack task",
-                "operationId": "HashCrackTaskWebhook",
-                "parameters": [
-                    {
-                        "description": "Hash crack task webhook input",
-                        "name": "input",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/model.HashCrackTaskWebhookInput"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK"
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorOutput"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorOutput"
-                        }
-                    }
-                }
-            }
         }
     },
     "definitions": {
@@ -279,6 +235,9 @@ const docTemplate = `{
         },
         "model.HashCrackTaskIDOutput": {
             "type": "object",
+            "required": [
+                "requestId"
+            ],
             "properties": {
                 "requestId": {
                     "type": "string"
@@ -298,58 +257,39 @@ const docTemplate = `{
                 "maxLength": {
                     "type": "integer",
                     "maximum": 6,
-                    "minimum": 0
+                    "minimum": 1
                 }
             }
         },
-        "model.HashCrackTaskStatus": {
-            "type": "string",
-            "enum": [
-                "IN_PROGRESS",
-                "READY",
-                "ERROR",
-                "UNKNOWN"
-            ],
-            "x-enum-varnames": [
-                "HashCrackStatusInProgress",
-                "HashCrackStatusReady",
-                "HashCrackStatusError",
-                "HashCrackStatusUnknown"
-            ]
-        },
         "model.HashCrackTaskStatusOutput": {
             "type": "object",
+            "required": [
+                "data",
+                "percent",
+                "status"
+            ],
             "properties": {
                 "data": {
                     "type": "array",
+                    "minItems": 0,
                     "items": {
                         "type": "string"
                     }
                 },
+                "percent": {
+                    "type": "number",
+                    "maximum": 100,
+                    "minimum": 0
+                },
                 "status": {
-                    "$ref": "#/definitions/model.HashCrackTaskStatus"
-                }
-            }
-        },
-        "model.HashCrackTaskWebhookInput": {
-            "type": "object",
-            "properties": {
-                "answer": {
-                    "type": "object",
-                    "properties": {
-                        "words": {
-                            "type": "array",
-                            "items": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                },
-                "partNumber": {
-                    "type": "integer"
-                },
-                "requestID": {
-                    "type": "string"
+                    "type": "string",
+                    "enum": [
+                        "IN_PROGRESS",
+                        "READY",
+                        "PARTIAL_READY",
+                        "ERROR",
+                        "UNKNOWN"
+                    ]
                 }
             }
         }

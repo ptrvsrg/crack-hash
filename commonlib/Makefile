@@ -4,6 +4,12 @@ lint:
 	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 	@golangci-lint run --tests=false --disable-all --timeout=2m -p error
 
+# Generate mocks
+mock:
+	@echo "Generating mocks..."
+	@go install github.com/vektra/mockery/v2@latest
+	@mockery --config ./.mockery.yaml
+
 # Test the application
 test:
 	@echo "Testing..."
@@ -16,4 +22,4 @@ test:
 	@echo "  test - Test the library"
 
 .DEFAULT_GOAL := help
-.PHONY: help lint test
+.PHONY: help mock lint test

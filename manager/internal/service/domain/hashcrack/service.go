@@ -4,44 +4,39 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
-	"github.com/gin-gonic/gin"
-	"github.com/go-http-utils/headers"
-	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/samber/lo"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"golang.org/x/exp/maps"
-	"resty.dev/v3"
 
+	"github.com/ptrvsrg/crack-hash/commonlib/bus/amqp/publisher"
 	"github.com/ptrvsrg/crack-hash/manager/config"
 	"github.com/ptrvsrg/crack-hash/manager/internal/persistence/entity"
 	"github.com/ptrvsrg/crack-hash/manager/internal/persistence/repository"
 	"github.com/ptrvsrg/crack-hash/manager/internal/service/domain"
 	"github.com/ptrvsrg/crack-hash/manager/internal/service/infrastructure"
-	managermodel "github.com/ptrvsrg/crack-hash/manager/pkg/model"
-	workermodel "github.com/ptrvsrg/crack-hash/worker/pkg/model"
-)
-
-var (
-	alphabet = "abcdefghijklmnopqrstuvwxyz1234567890"
+	"github.com/ptrvsrg/crack-hash/manager/pkg/message"
+	"github.com/ptrvsrg/crack-hash/manager/pkg/model"
 )
 
 type svc struct {
-	logger   zerolog.Logger
-	cfg      config.TaskConfig
-	client   *resty.Client
-	taskRepo repository.HashCrackTask
-	splitSvc infrastructure.TaskSplit
+	logger    zerolog.Logger
+	cfg       config.TaskConfig
+	taskRepo  repository.HashCrackTask
+	splitSvc  infrastructure.TaskSplit
+	publisher publisher.Publisher[message.HashCrackTaskStarted]
 }
 
 func NewService(
 	cfg config.TaskConfig,
-	client *resty.Client,
 	taskRepo repository.HashCrackTask,
 	splitSvc infrastructure.TaskSplit,
+	publisher publisher.Publisher[message.HashCrackTaskStarted],
 ) domain.HashCrackTask {
 
 	return &svc{
@@ -49,16 +44,14 @@ func NewService(
 			Str("type", "domain").
 			Str("service", "hash-crack").
 			Logger(),
-		cfg:      cfg,
-		client:   client,
-		taskRepo: taskRepo,
-		splitSvc: splitSvc,
+		cfg:       cfg,
+		taskRepo:  taskRepo,
+		splitSvc:  splitSvc,
+		publisher: publisher,
 	}
 }
 
-func (s *svc) CreateTask(
-	ctx context.Context, input *managermodel.HashCrackTaskInput,
-) (*managermodel.HashCrackTaskIDOutput, error) {
+func (s *svc) CreateTask(ctx context.Context, input *model.HashCrackTaskInput) (*model.HashCrackTaskIDOutput, error) {
 	s.logger.Info().
 		Str("hash", input.Hash).
 		Int("max_length", input.MaxLength).
@@ -75,20 +68,8 @@ func (s *svc) CreateTask(
 		return buildTaskIDOutput(sameTasks[0]), nil
 	}
 
-	// Count in progress tasks
-	inProgressCount, err := s.taskRepo.CountByStatus(ctx, entity.HashCrackTaskStatusInProgress)
-	if err != nil {
-		s.logger.Error().Err(err).Stack().Msg("failed to count in progress tasks")
-		return nil, fmt.Errorf("failed to count in progress tasks: %w", err)
-	}
-
-	if inProgressCount >= s.cfg.Limit {
-		s.logger.Error().Err(domain.ErrTooManyTasks).Msg("failed to create task")
-		return nil, domain.ErrTooManyTasks
-	}
-
 	// Split task
-	partCount, err := s.splitSvc.Split(ctx, input.MaxLength, len(alphabet))
+	partCount, err := s.splitSvc.Split(ctx, input.MaxLength, len(s.cfg.Alphabet))
 	if err != nil {
 		s.logger.Error().Err(err).Stack().Msg("failed to split task")
 		return nil, fmt.Errorf("failed to split task: %w", err)
@@ -110,11 +91,18 @@ func (s *svc) CreateTask(
 	return buildTaskIDOutput(task), nil
 }
 
-func (s *svc) GetTaskStatus(ctx context.Context, id string) (*managermodel.HashCrackTaskStatusOutput, error) {
+func (s *svc) GetTaskStatus(ctx context.Context, id string) (*model.HashCrackTaskStatusOutput, error) {
 	s.logger.Info().Str("id", id).Msg("get task status")
 
+	// Validate ID
+	objID, err := bson.ObjectIDFromHex(id)
+	if err != nil {
+		s.logger.Error().Err(err).Stack().Msg("failed to validate ID")
+		return nil, domain.ErrInvalidRequestID
+	}
+
 	// Get task
-	task, err := s.taskRepo.Get(ctx, id)
+	task, err := s.taskRepo.Get(ctx, objID)
 	if err != nil {
 		s.logger.Error().Err(err).Stack().Msg("failed to get task")
 
@@ -128,27 +116,33 @@ func (s *svc) GetTaskStatus(ctx context.Context, id string) (*managermodel.HashC
 	return buildTaskStatusOutput(task), nil
 }
 
-func (s *svc) SaveResultSubtask(ctx context.Context, input *managermodel.HashCrackTaskWebhookInput) error {
+func (s *svc) SaveResultSubtask(ctx context.Context, input *message.HashCrackTaskResult) error {
 	s.logger.Info().
 		Str("id", input.RequestID).
 		Int("part_number", input.PartNumber).
 		Msg("save result subtask")
 
+	// Validate ID
+	objID, err := bson.ObjectIDFromHex(input.RequestID)
+	if err != nil {
+		s.logger.Error().Err(err).Stack().Msg("failed to validate ID")
+		return domain.ErrInvalidRequestID
+	}
+
 	// Get task
-	task, err := s.taskRepo.Get(ctx, input.RequestID)
+	task, err := s.taskRepo.Get(ctx, objID)
 	if err != nil {
 		s.logger.Error().Err(err).Stack().Msg("failed to get task")
+
+		if errors.Is(err, repository.ErrCrackTaskNotFound) {
+			return domain.ErrTaskNotFound
+		}
 		return fmt.Errorf("failed to get task: %w", err)
 	}
 
-	// Add result to task and save
-	if input.Error != nil {
-		task.Subtasks[input.PartNumber] = buildErrorSubtaskEntity(input)
-	} else {
-		task.Subtasks[input.PartNumber] = buildSuccessSubtaskEntity(input)
-	}
-
 	// Update task
+	task.Subtasks[input.PartNumber] = buildSubtaskEntity(input)
+
 	if err := s.taskRepo.Update(ctx, task); err != nil {
 		s.logger.Error().Err(err).Stack().Msg("failed to update task")
 		return fmt.Errorf("failed to update task: %w", err)
@@ -157,18 +151,8 @@ func (s *svc) SaveResultSubtask(ctx context.Context, input *managermodel.HashCra
 	// Check if task is finished
 	s.logger.Debug().Msg("check if task is finished")
 
-	if len(task.Subtasks) == task.PartCount {
-		hasError := false
-		hasSuccess := false
-
-		for _, subtask := range task.Subtasks {
-			if subtask.Status == entity.HashCrackSubtaskStatusSuccess {
-				hasSuccess = true
-			} else {
-				hasError = true
-			}
-		}
-
+	hasSuccess, hasError, hasInProgress := s.hasSubtaskStatuses(task)
+	if !hasInProgress && len(task.Subtasks) == task.PartCount {
 		switch {
 		case hasError && hasSuccess:
 			s.markTaskAsPartialReady(task)
@@ -235,13 +219,12 @@ func (s *svc) DeleteExpiredTasks(ctx context.Context) error {
 }
 
 func (s *svc) startExecuteTask(ctx context.Context, task *entity.HashCrackTask) error {
-	s.logger.Debug().Str("id", task.ID).Msg("start execute task")
+	s.logger.Debug().Str("id", task.ObjectID.Hex()).Msg("start execute task")
 
 	// Send tasks to workers
 	for i := 0; i < task.PartCount; i++ {
-		workerInput := buildWorkerRequest(task, i, alphabet)
-
-		if err := s.sendTaskToWorker(ctx, workerInput); err != nil {
+		msg := buildTaskMessage(task, i, s.cfg.Alphabet)
+		if err := s.publisher.SendMessage(ctx, msg, publisher.Persistent, false, false); err != nil {
 			task.Subtasks[i] = &entity.HashCrackSubtask{
 				PartNumber: i,
 				Status:     entity.HashCrackSubtaskStatusError,
@@ -259,7 +242,7 @@ func (s *svc) startExecuteTask(ctx context.Context, task *entity.HashCrackTask) 
 }
 
 func (s *svc) finishTask(ctx context.Context, task *entity.HashCrackTask) error {
-	s.logger.Debug().Str("id", task.ID).Msg("finish task")
+	s.logger.Debug().Str("id", task.ObjectID.Hex()).Msg("finish task")
 
 	// Mark task as ERROR
 	s.markTaskAsErrorWithReason(task, "timeout")
@@ -273,32 +256,20 @@ func (s *svc) finishTask(ctx context.Context, task *entity.HashCrackTask) error 
 	return nil
 }
 
-func (s *svc) sendTaskToWorker(ctx context.Context, input *workermodel.HashCrackTaskInput) error {
-	s.logger.Debug().Str("id", input.RequestID).Msg("send task to worker")
-
-	errOutput := &workermodel.ErrorOutput{}
-
-	resp, err := s.client.R().
-		SetContext(ctx).
-		SetHeader(headers.ContentType, gin.MIMEXML).
-		SetBody(input).
-		SetError(errOutput).
-		Post("/internal/api/worker/hash/crack/task")
-
-	// Process response
-	if err != nil {
-		s.logger.Error().Err(err).Stack().Msg("failed to send task to worker")
-		return fmt.Errorf("failed to send task to worker: %w", err)
+func (s *svc) hasSubtaskStatuses(task *entity.HashCrackTask) (hasSuccess, hasError, hasInProgress bool) {
+	for _, subtask := range task.Subtasks {
+		switch subtask.Status {
+		case entity.HashCrackSubtaskStatusSuccess:
+			hasSuccess = true
+		case entity.HashCrackSubtaskStatusError:
+			hasError = true
+		case entity.HashCrackSubtaskStatusInProgress:
+			hasInProgress = true
+		case entity.HashCrackSubtaskStatusUnknown:
+		}
 	}
 
-	if resp.IsError() {
-		err = errors.New(errOutput.Message) // nolint
-		s.logger.Error().Err(err).Stack().Msg("failed to execute task")
-
-		return fmt.Errorf("failed to execute task: %w", err)
-	}
-
-	return nil
+	return
 }
 
 func (s *svc) markTaskAsError(task *entity.HashCrackTask) {
@@ -342,15 +313,15 @@ func (s *svc) markTaskAsReady(task *entity.HashCrackTask) {
 	task.Status = entity.HashCrackTaskStatusReady
 }
 
-func buildTaskIDOutput(task *entity.HashCrackTask) *managermodel.HashCrackTaskIDOutput {
-	return &managermodel.HashCrackTaskIDOutput{
-		RequestID: task.ID,
+func buildTaskIDOutput(task *entity.HashCrackTask) *model.HashCrackTaskIDOutput {
+	return &model.HashCrackTaskIDOutput{
+		RequestID: task.ObjectID.Hex(),
 	}
 }
 
-func buildTaskEntity(input *managermodel.HashCrackTaskInput, partCount int) *entity.HashCrackTask {
+func buildTaskEntity(input *model.HashCrackTaskInput, partCount int) *entity.HashCrackTask {
 	return &entity.HashCrackTask{
-		ID:         uuid.New().String(),
+		ObjectID:   bson.NewObjectID(),
 		Hash:       input.Hash,
 		MaxLength:  input.MaxLength,
 		PartCount:  partCount,
@@ -363,54 +334,61 @@ func buildTaskEntity(input *managermodel.HashCrackTaskInput, partCount int) *ent
 	}
 }
 
-func buildSuccessSubtaskEntity(input *managermodel.HashCrackTaskWebhookInput) *entity.HashCrackSubtask {
+func buildSubtaskEntity(input *message.HashCrackTaskResult) *entity.HashCrackSubtask {
+	if input.Status == entity.HashCrackSubtaskStatusError.String() {
+		return &entity.HashCrackSubtask{
+			PartNumber: input.PartNumber,
+			Status:     entity.HashCrackSubtaskStatusError,
+			Data:       []string{},
+			Reason:     input.Error,
+		}
+	}
+
 	data := make([]string, 0)
+	percent := 0.0
+
 	if input.Answer != nil {
 		data = input.Answer.Words
+		percent = input.Answer.Percent
 	}
 
 	return &entity.HashCrackSubtask{
 		PartNumber: input.PartNumber,
-		Status:     entity.HashCrackSubtaskStatusSuccess,
+		Status:     entity.ParseHashCrackSubtaskStatus(input.Status),
 		Data:       data,
+		Percent:    percent,
 	}
 }
 
-func buildErrorSubtaskEntity(input *managermodel.HashCrackTaskWebhookInput) *entity.HashCrackSubtask {
-	return &entity.HashCrackSubtask{
-		PartNumber: input.PartNumber,
-		Status:     entity.HashCrackSubtaskStatusError,
-		Data:       []string{},
-		Reason:     input.Error,
-	}
-}
-
-func buildTaskStatusOutput(task *entity.HashCrackTask) *managermodel.HashCrackTaskStatusOutput {
+func buildTaskStatusOutput(task *entity.HashCrackTask) *model.HashCrackTaskStatusOutput {
 	data := make([]string, 0)
-	if task.Status == entity.HashCrackTaskStatusReady || task.Status == entity.HashCrackTaskStatusPartialReady {
-		values := maps.Values(task.Subtasks)
+	percent := 0.0
 
-		data = lo.FlatMap(
-			values, func(subtask *entity.HashCrackSubtask, _ int) []string {
-				return subtask.Data
-			},
-		)
+	for _, subtask := range task.Subtasks {
+		if task.PartCount > 0 {
+			percent += subtask.Percent / float64(task.PartCount)
+		}
+
+		if task.Status != entity.HashCrackTaskStatusError {
+			data = append(data, subtask.Data...)
+		}
 	}
 
-	return &managermodel.HashCrackTaskStatusOutput{
-		Status: task.Status.String(),
-		Data:   data,
+	return &model.HashCrackTaskStatusOutput{
+		Status:  task.Status.String(),
+		Data:    data,
+		Percent: math.Min(100.0, percent),
 	}
 }
 
-func buildWorkerRequest(task *entity.HashCrackTask, i int, alphabet string) *workermodel.HashCrackTaskInput {
+func buildTaskMessage(task *entity.HashCrackTask, i int, alphabet string) *message.HashCrackTaskStarted {
 	symbols := strings.Split(alphabet, "")
 
-	return &workermodel.HashCrackTaskInput{
-		RequestID:  task.ID,
+	return &message.HashCrackTaskStarted{
+		RequestID:  task.ObjectID.Hex(),
 		Hash:       task.Hash,
 		MaxLength:  task.MaxLength,
-		Alphabet:   workermodel.Alphabet{Symbols: symbols},
+		Alphabet:   message.Alphabet{Symbols: symbols},
 		PartNumber: i,
 		PartCount:  task.PartCount,
 	}

@@ -66,92 +66,6 @@ const docTemplate = `{
                     }
                 }
             }
-        },
-        "/api/manager/swagger/api-docs.json": {
-            "get": {
-                "description": "Request for getting swagger specification in JSON",
-                "produces": [
-                    "application/json; charset=utf-8"
-                ],
-                "tags": [
-                    "Swagger API"
-                ],
-                "summary": "Swagger JSON",
-                "operationId": "SwaggerJSON",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/manager/swagger/index.html": {
-            "get": {
-                "description": "Request for getting swagger UI",
-                "produces": [
-                    "text/html; charset=utf-8"
-                ],
-                "tags": [
-                    "Swagger API"
-                ],
-                "summary": "Swagger UI",
-                "operationId": "SwaggerUI",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
-        "/internal/api/worker/hash/crack/task": {
-            "post": {
-                "description": "Request for executing hash crack task.",
-                "consumes": [
-                    "application/xml"
-                ],
-                "produces": [
-                    "application/xml"
-                ],
-                "tags": [
-                    "Hash Crack Task API"
-                ],
-                "summary": "Hash crack task",
-                "operationId": "hashCrackTask",
-                "parameters": [
-                    {
-                        "description": "Hash crack task input",
-                        "name": "input",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/model.HashCrackTaskInput"
-                        }
-                    }
-                ],
-                "responses": {
-                    "202": {
-                        "description": "Accepted"
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorOutput"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorOutput"
-                        }
-                    }
-                }
-            }
         }
     },
     "definitions": {
@@ -178,44 +92,6 @@ const docTemplate = `{
                     "minimum": 400
                 },
                 "timestamp": {
-                    "type": "string"
-                }
-            }
-        },
-        "model.HashCrackTaskInput": {
-            "type": "object",
-            "required": [
-                "alphabet",
-                "hash",
-                "requestID"
-            ],
-            "properties": {
-                "alphabet": {
-                    "type": "object",
-                    "properties": {
-                        "symbols": {
-                            "type": "array",
-                            "items": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                },
-                "hash": {
-                    "type": "string"
-                },
-                "maxLength": {
-                    "type": "integer",
-                    "maximum": 6,
-                    "minimum": 0
-                },
-                "partCount": {
-                    "type": "integer"
-                },
-                "partNumber": {
-                    "type": "integer"
-                },
-                "requestID": {
                     "type": "string"
                 }
             }

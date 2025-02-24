@@ -1,6 +1,8 @@
 package config
 
 import (
+	"time"
+
 	_ "github.com/joho/godotenv/autoload"
 )
 
@@ -13,27 +15,49 @@ type (
 	Env string
 
 	Config struct {
-		Server  ServerConfig  `yaml:"server"`
-		Manager ManagerConfig `yaml:"manager"`
-		Task    TaskConfig    `yaml:"task"`
+		Server ServerConfig
+		AMQP   AMQPConfig
+		Task   TaskConfig
 	}
 
 	ServerConfig struct {
-		Env  Env `yaml:"env" env:"SERVER_ENV" env-default:"dev" validate:"oneof=dev prod"`
-		Port int `yaml:"port" env:"SERVER_PORT" env-default:"8080" validate:"required,min=-1,max=65535"`
+		Env  Env `default:"dev" validate:"oneof=dev prod"`
+		Port int `default:"8080" validate:"required,min=-1,max=65535"`
 	}
 
-	ManagerConfig struct {
-		Address string `yaml:"address" env:"MANAGER_ADDRESS" validate:"required,http_url"`
+	AMQPConfig struct {
+		URIs       []string `validate:"required,min=1,dive,required"`
+		Username   string   `validate:"required"`
+		Password   string   `validate:"required"`
+		Prefetch   int      `default:"10" validate:"min=1"`
+		Consumers  AMQPConsumersConfig
+		Publishers AMQPPublishersConfig
+	}
+
+	AMQPConsumersConfig struct {
+		TaskStarted AMQPConsumerConfig
+	}
+
+	AMQPConsumerConfig struct {
+		Queue string `validate:"required"`
+	}
+
+	AMQPPublishersConfig struct {
+		TaskResult AMQPPublisherConfig
+	}
+
+	AMQPPublisherConfig struct {
+		Exchange   string `validate:"required"`
+		RoutingKey string `validate:"required"`
 	}
 
 	TaskConfig struct {
-		Split       TaskSplitConfig `yaml:"split"`
-		Concurrency int             `yaml:"concurrency" env:"TASK_CONCURRENCY" env-default:"1000" validate:"min=1"`
+		Split          TaskSplitConfig
+		ProgressPeriod time.Duration `default:"5s" validate:"required"`
 	}
 
 	TaskSplitConfig struct {
-		Strategy  string `yaml:"strategy" env:"TASK_SPLIT_STRATEGY" env-default:"chunk-based" validate:"oneof=chunk-based"`
-		ChunkSize int    `yaml:"chunkSize" env:"TASK_SPLIT_CHUNK_SIZE" env-default:"10000000" validate:"min=1"`
+		Strategy  string `default:"chunk-based" validate:"oneof=chunk-based"`
+		ChunkSize int    `default:"10000000" validate:"min=1"`
 	}
 )

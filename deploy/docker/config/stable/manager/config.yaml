@@ -1,0 +1,37 @@
+server:
+  port: 8080
+  env: dev
+mongodb:
+  uri: mongodb://mongo1:27017,mongo2:27017,mongo3:27017/?replicaSet=rs0
+  username: admin
+  password: password
+  db: crack_hash
+  writeconcern:
+    w: majority
+    journal: true
+  readconcern:
+    level: majority
+amqp:
+  uris:
+    - amqp://rabbitmq1:5672
+    - amqp://rabbitmq2:5672
+    - amqp://rabbitmq3:5672
+  username: admin
+  password: password
+  prefetch: 100
+  consumers:
+    taskresult:
+      queue: queue.task.result
+  publishers:
+    taskstarted:
+      exchange: exchange.task.started
+      routingkey: workers
+task:
+  alphabet: abcdefghijklmnopqrstuvwxyz0123456789
+  split:
+    strategy: chunk-based
+    chunksize: 10000000
+  timeout: 1h
+  limit: 10
+  maxage: 24h
+  finishdelay: 1m

@@ -1,0 +1,83 @@
+{
+  "users": [
+    {
+      "name": "admin",
+      "password": "password",
+      "tags": "administrator"
+    }
+  ],
+  "permissions": [
+    {
+      "user": "admin",
+      "vhost": "/",
+      "configure": ".*",
+      "write": ".*",
+      "read": ".*"
+    }
+  ],
+  "vhosts": [
+    {
+      "name": "/"
+    }
+  ],
+  "exchanges": [
+    {
+      "name": "exchange.task.started",
+      "vhost": "/",
+      "type": "direct",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "exchange.task.result",
+      "vhost": "/",
+      "type": "direct",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    }
+  ],
+  "queues": [
+    {
+      "name": "queue.task.started",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-consumer-timeout": "600000"
+      }
+    },
+    {
+      "name": "queue.task.result",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-consumer-timeout": "60000"
+      }
+    }
+  ],
+  "bindings": [
+    {
+      "source": "exchange.task.started",
+      "vhost": "/",
+      "destination": "queue.task.started",
+      "destination_type": "queue",
+      "routing_key": "workers",
+      "arguments": {}
+    },
+    {
+      "source": "exchange.task.result",
+      "vhost": "/",
+      "destination": "queue.task.result",
+      "destination_type": "queue",
+      "routing_key": "managers",
+      "arguments": {}
+    }
+  ]
+}

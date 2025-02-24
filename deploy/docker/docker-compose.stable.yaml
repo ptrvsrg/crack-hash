@@ -1,0 +1,363 @@
+version: "3.8"
+
+name: "crack-hash-stable"
+
+volumes:
+  rabbitmq1-data:
+  rabbitmq2-data:
+  rabbitmq3-data:
+  rabbitmq1-logs:
+  rabbitmq2-logs:
+  rabbitmq3-logs:
+
+  mongo-rs-pki:
+  mongo1-data:
+  mongo2-data:
+  mongo3-data:
+  mongo1-config:
+  mongo2-config:
+  mongo3-config:
+  mongo1-logs:
+  mongo2-logs:
+  mongo3-logs:
+
+  nginx-logs:
+
+networks:
+  net:
+
+services:
+  ##### RabbitMQ #####
+  rabbitmq1:
+    image: 'rabbitmq:4.0.6-management-alpine'
+    hostname: rabbitmq1
+    restart: unless-stopped
+    environment:
+      RABBITMQ_CONFIG_FILE: /etc/rabbitmq/rabbitmq.conf
+      RABBITMQ_ERLANG_COOKIE: secret
+      NODENAME: rabbitmq@rabbitmq1
+    healthcheck:
+      test: [ "CMD-SHELL", "rabbitmq-diagnostics -q status && rabbitmq-diagnostics -q check_local_alarms" ]
+    volumes:
+      - rabbitmq1-data:/var/lib/rabbitmq
+      - rabbitmq1-logs:/var/log/rabbitmq
+      - ./config/stable/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ./config/stable/rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:ro
+    networks:
+      - net
+    deploy:
+      resources:
+        limits:
+          cpus: "1.5"
+          memory: "1536M"
+        reservations:
+          cpus: "0.5"
+          memory: "512M"
+
+  rabbitmq2:
+    image: 'rabbitmq:4.0.6-management-alpine'
+    hostname: rabbitmq2
+    restart: unless-stopped
+    environment:
+      RABBITMQ_CONFIG_FILE: /etc/rabbitmq/rabbitmq.conf
+      RABBITMQ_ERLANG_COOKIE: secret
+      NODENAME: rabbitmq@rabbitmq2
+    healthcheck:
+      test: [ "CMD-SHELL", "rabbitmq-diagnostics -q status && rabbitmq-diagnostics -q check_local_alarms" ]
+    volumes:
+      - rabbitmq2-data:/var/lib/rabbitmq
+      - rabbitmq2-logs:/var/log/rabbitmq
+      - ./config/stable/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ./config/stable/rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:ro
+    networks:
+      - net
+    deploy:
+      resources:
+        limits:
+          cpus: "1.5"
+          memory: "1536M"
+        reservations:
+          cpus: "0.5"
+          memory: "512M"
+
+  rabbitmq3:
+    image: 'rabbitmq:4.0.6-management-alpine'
+    hostname: rabbitmq3
+    restart: unless-stopped
+    environment:
+      RABBITMQ_CONFIG_FILE: /etc/rabbitmq/rabbitmq.conf
+      RABBITMQ_ERLANG_COOKIE: secret
+      NODENAME: rabbitmq@rabbitmq3
+    healthcheck:
+      test: [ "CMD-SHELL", "rabbitmq-diagnostics -q status && rabbitmq-diagnostics -q check_local_alarms" ]
+    volumes:
+      - rabbitmq3-data:/var/lib/rabbitmq
+      - rabbitmq3-logs:/var/log/rabbitmq
+      - ./config/stable/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ./config/stable/rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:ro
+    networks:
+      - net
+    deploy:
+      resources:
+        limits:
+          cpus: "1.5"
+          memory: "1536M"
+        reservations:
+          cpus: "0.5"
+          memory: "512M"
+
+  ##### MongoDB #####
+  mongo-pki-setup:
+    image: mongo:7.0.17-jammy
+    restart: no
+    entrypoint: [ "bash", "/scripts/pki_setup.sh" ]
+    volumes:
+      - ./config/stable/mongo/pki_setup.sh:/scripts/pki_setup.sh
+      - mongo-rs-pki:/etc/mongodb/pki
+    networks:
+      - net
+
+  mongo1:
+    image: mongo:7.0.17-jammy
+    restart: unless-stopped
+    command: [ "--config", "/etc/mongodb/mongod.conf" ]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+      MONGO_INITDB_DATABASE: crack_hash
+    healthcheck:
+      test: echo 'db.runCommand({serverStatus:1}).ok' | mongosh admin -u $$MONGO_INITDB_ROOT_USERNAME -p $$MONGO_INITDB_ROOT_PASSWORD --quiet | grep 1
+    volumes:
+      - mongo1-data:/data/db
+      - mongo1-config:/data/configdb
+      - mongo1-logs:/var/log/mongodb
+      - mongo-rs-pki:/etc/mongodb/pki:ro
+      - ./config/stable/mongo/mongod.conf:/etc/mongodb/mongod.conf:ro
+    networks:
+      - net
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: "2G"
+        reservations:
+          cpus: "1.0"
+          memory: "1G"
+    depends_on:
+      mongo-pki-setup:
+        condition: service_completed_successfully
+
+  mongo2:
+    image: mongo:7.0.17-jammy
+    restart: unless-stopped
+    command: [ "--config", "/etc/mongodb/mongod.conf" ]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+    healthcheck:
+      test: echo 'db.runCommand({serverStatus:1}).ok' | mongosh admin -u $$MONGO_INITDB_ROOT_USERNAME -p $$MONGO_INITDB_ROOT_PASSWORD --quiet | grep 1
+    volumes:
+      - mongo2-data:/data/db
+      - mongo2-config:/data/configdb
+      - mongo2-logs:/var/log/mongodb
+      - mongo-rs-pki:/etc/mongodb/pki:ro
+      - ./config/stable/mongo/mongod.conf:/etc/mongodb/mongod.conf:ro
+    networks:
+      - net
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: "2G"
+        reservations:
+          cpus: "1.0"
+          memory: "1G"
+    depends_on:
+      mongo-pki-setup:
+        condition: service_completed_successfully
+
+  mongo3:
+    image: mongo:7.0.17-jammy
+    restart: unless-stopped
+    command: [ "--config", "/etc/mongodb/mongod.conf" ]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+    healthcheck:
+      test: echo 'db.runCommand({serverStatus:1}).ok' | mongosh admin -u $$MONGO_INITDB_ROOT_USERNAME -p $$MONGO_INITDB_ROOT_PASSWORD --quiet | grep 1
+    volumes:
+      - mongo3-data:/data/db
+      - mongo3-config:/data/configdb
+      - mongo3-logs:/var/log/mongodb
+      - mongo-rs-pki:/etc/mongodb/pki:ro
+      - ./config/stable/mongo/mongod.conf:/etc/mongodb/mongod.conf:ro
+    networks:
+      - net
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: "2G"
+        reservations:
+          cpus: "1.0"
+          memory: "1G"
+    depends_on:
+      mongo-pki-setup:
+        condition: service_completed_successfully
+
+  mongo-rs-setup:
+    image: mongo:7.0.17-jammy
+    restart: no
+    entrypoint: [ "bash", "/scripts/rs_setup.sh" ]
+    environment:
+      MONGO_USERNAME: admin
+      MONGO_PASSWORD: password
+    volumes:
+      - ./config/stable/mongo/rs_setup.sh:/scripts/rs_setup.sh
+    networks:
+      - net
+    depends_on:
+      mongo1:
+        condition: service_healthy
+      mongo2:
+        condition: service_healthy
+      mongo3:
+        condition: service_healthy
+
+  mongo-express:
+    image: mongo-express:1.0.2-20-alpine3.19
+    restart: unless-stopped
+    healthcheck:
+      test: [ 'CMD-SHELL', 'wget -O - http://0.0.0.0:8081/services/mongo-express/status | grep "{\"status\":\"ok\"}"' ]
+    environment:
+      ME_CONFIG_MONGODB_URL: mongodb://admin:password@mongo1:27017,mongo2:27017,mongo3:27017?replicaSet=rs0
+      ME_CONFIG_SITE_BASEURL: /services/mongo-express
+      ME_CONFIG_BASICAUTH_USERNAME: admin
+      ME_CONFIG_BASICAUTH_PASSWORD: password
+    networks:
+      - net
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: "100M"
+        reservations:
+          cpus: "0.1"
+          memory: "50M"
+    depends_on:
+      mongo1:
+        condition: service_healthy
+      mongo2:
+        condition: service_healthy
+      mongo3:
+        condition: service_healthy
+
+  ##### Application #####
+  worker:
+    build:
+      context: ../..
+      dockerfile: worker/Dockerfile
+      args:
+        ARTIFACT_VERSION: ${ARTIFACT_VERSION:-0.0.0}
+    image: ghcr.io/ptrvsrg/crack-hash:worker-${ARTIFACT_VERSION:-latest}
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD-SHELL", "/app/worker healthcheck" ]
+    volumes:
+      - ./config/stable/worker/config.yaml:/app/config/config.yaml:ro
+    networks:
+      - net
+    deploy:
+      replicas: 3
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: "150M"
+        reservations:
+          cpus: "1.0"
+          memory: "75M"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    depends_on:
+      rabbitmq1:
+        condition: service_healthy
+      rabbitmq2:
+        condition: service_healthy
+      rabbitmq3:
+        condition: service_healthy
+
+  manager:
+    build:
+      context: ../..
+      dockerfile: manager/Dockerfile
+      args:
+        ARTIFACT_VERSION: ${ARTIFACT_VERSION:-0.0.0}
+    image: ghcr.io/ptrvsrg/crack-hash:manager-${ARTIFACT_VERSION:-latest}
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD-SHELL", "/app/manager healthcheck" ]
+    volumes:
+      - ./config/stable/manager/config.yaml:/app/config/config.yaml:ro
+    networks:
+      - net
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: "200M"
+        reservations:
+          cpus: "0.1"
+          memory: "100M"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    depends_on:
+      mongo-rs-setup:
+        condition: service_completed_successfully
+      rabbitmq1:
+        condition: service_healthy
+      rabbitmq2:
+        condition: service_healthy
+      rabbitmq3:
+        condition: service_healthy
+
+  ##### API Gateway #####
+  api-gateway:
+    image: nginx:1.27.4-alpine3.21
+    restart: unless-stopped
+    entrypoint: ""
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -T5 -qO-  http://127.0.0.1:80/services/gateway/status || exit 1" ]
+    volumes:
+      - ./config/stable/api-gateway/nginx.conf:/etc/nginx/nginx.conf:ro
+      - nginx-logs:/var/log/nginx:ro
+    ports:
+      - "8080:80"
+    networks:
+      - net
+    deploy:
+      resources:
+        limits:
+          cpus: "0.05"
+          memory: "20M"
+        reservations:
+          cpus: "0.02"
+          memory: "10M"
+    depends_on:
+      mongo-express:
+        condition: service_healthy
+      rabbitmq1:
+        condition: service_healthy
+      rabbitmq2:
+        condition: service_healthy
+      rabbitmq3:
+        condition: service_healthy
+      worker:
+        condition: service_healthy
+      manager:
+        condition: service_healthy

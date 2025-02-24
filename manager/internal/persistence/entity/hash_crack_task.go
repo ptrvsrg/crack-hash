@@ -2,19 +2,21 @@ package entity
 
 import (
 	"time"
+
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 type HashCrackTask struct {
-	ID         string
-	Hash       string
-	MaxLength  int
-	PartCount  int
-	Subtasks   map[int]*HashCrackSubtask
-	Status     HashCrackTaskStatus
-	Reason     *string
-	FinishedAt *time.Time
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
+	ObjectID   bson.ObjectID             `bson:"_id"`
+	Hash       string                    `bson:"hash"`
+	MaxLength  int                       `bson:"maxLength"`
+	PartCount  int                       `bson:"partCount"`
+	Subtasks   map[int]*HashCrackSubtask `bson:"subtasks"`
+	Status     HashCrackTaskStatus       `bson:"status"`
+	Reason     *string                   `bson:"reason,omitempty"`
+	FinishedAt *time.Time                `bson:"finishedAt,omitempty"`
+	CreatedAt  time.Time                 `bson:"createdAt"`
+	UpdatedAt  time.Time                 `bson:"updatedAt"`
 }
 
 type HashCrackTaskStatus string

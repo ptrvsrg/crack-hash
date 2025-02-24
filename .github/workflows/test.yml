@@ -1,0 +1,94 @@
+name: Test
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    strategy:
+      matrix:
+        platform:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+        service:
+          - manager
+          - worker
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.23.5'
+      - name: Build ${{ matrix.service }}
+        working-directory: ${{ matrix.service }}
+        run: go build -v -o ./bin/${{ matrix.service }} ./cmd/cli
+  lint:
+    needs: build
+    strategy:
+      matrix:
+        platform:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+        service:
+          - manager
+          - worker
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.23.5'
+      - name: golangci-lint ${{ matrix.service }}
+        uses: golangci/golangci-lint-action@v6
+        with:
+          working-directory: ${{ matrix.service }}
+          version: v1.64.5
+          args: --tests=false --disable-all --timeout=2m -p error -p bugs
+  test:
+    needs: lint
+    strategy:
+      matrix:
+        platform:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+        service:
+          - manager
+          - worker
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.23.5'
+      - name: Test ${{ matrix.service }}
+        working-directory: ${{ matrix.service }}
+        run: go test ./... -v
+  benchmark:
+    needs: lint
+    strategy:
+      matrix:
+        platform:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+        service:
+          - manager
+          - worker
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.23.5'
+      - name: Test ${{ matrix.service }}
+        working-directory: ${{ matrix.service }}
+        run: go test ./... -v -bench=. -count 5 -run=^#

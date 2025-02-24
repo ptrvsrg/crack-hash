@@ -1,0 +1,23 @@
+with-expecter: true
+issue-845-fix: true
+resolve-type-alias: false
+mockname: "{{.InterfaceName}}Mock"
+filename: "{{.InterfaceNameSnake}}.go"
+outpkg: "mock"
+dir: "{{.InterfaceDir}}/mock"
+packages:
+  github.com/ptrvsrg/crack-hash/manager/internal/persistence/repository:
+    config:
+      include-regex: ".*"
+      exclude-regex: ".*Option"
+      filename: "{{.InterfaceNameSnake}}.go"
+  github.com/ptrvsrg/crack-hash/manager/internal/service/domain:
+    config:
+      include-regex: ".*"
+      exclude-regex: ".*Option"
+      filename: "{{.InterfaceNameSnake}}.go"
+  github.com/ptrvsrg/crack-hash/manager/internal/service/infrastructure:
+    config:
+      include-regex: ".*"
+      exclude-regex: ".*Option"
+      filename: "{{.InterfaceNameSnake}}.go"

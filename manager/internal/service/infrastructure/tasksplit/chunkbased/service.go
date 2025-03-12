@@ -3,29 +3,35 @@ package chunkbased
 import (
 	"context"
 	"fmt"
-	"github.com/ptrvsrg/crack-hash/manager/internal/helper"
-	"github.com/ptrvsrg/crack-hash/manager/internal/service/infrastructure"
+	"math"
+
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"math"
-)
 
-var (
-	maxWordsPerSubtask = 10_000_000
+	"github.com/ptrvsrg/crack-hash/manager/internal/helper"
+	"github.com/ptrvsrg/crack-hash/manager/internal/service/infrastructure"
 )
 
 type svc struct {
-	logger zerolog.Logger
+	chunkSize int
+	logger    zerolog.Logger
 }
 
-func NewService() infrastructure.TaskSplit {
+func NewService(chunkSize int) infrastructure.TaskSplit {
 	return &svc{
-		logger: log.With().Str("infra-service", "task-split").Logger(),
+		chunkSize: chunkSize,
+		logger: log.With().
+			Str("type", "infrastructure").
+			Str("infra-service", "task-split").
+			Logger(),
 	}
 }
 
 func (s *svc) Split(_ context.Context, wordMaxLength, alphabetLength int) (int, error) {
-	s.logger.Info().Msgf("split task: wordMaxLength=%d, alphabetLength=%d", wordMaxLength, alphabetLength)
+	s.logger.Info().
+		Int("wordMaxLength", wordMaxLength).
+		Int("alphabetLength", alphabetLength).
+		Msg("split task")
 
 	// Validate input
 	if wordMaxLength <= -1 {
@@ -44,7 +50,11 @@ func (s *svc) Split(_ context.Context, wordMaxLength, alphabetLength int) (int, 
 	}
 
 	// Calculate number of subtasks
-	numSubtasks := math.Ceil(float64(wordCount) / float64(maxWordsPerSubtask))
+	numSubtasks := int(math.Ceil(float64(wordCount) / float64(s.chunkSize)))
 
-	return int(numSubtasks), nil
+	s.logger.Info().
+		Int("numSubtasks", numSubtasks).
+		Msg("number of subtasks calculated")
+
+	return numSubtasks, nil
 }

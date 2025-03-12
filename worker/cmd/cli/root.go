@@ -3,13 +3,14 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/ptrvsrg/crack-hash/worker/config"
-	"github.com/ptrvsrg/crack-hash/worker/internal/logging"
-	"github.com/ptrvsrg/crack-hash/worker/internal/version"
-	"github.com/rs/zerolog/log"
-	"github.com/urfave/cli/v3"
 	"os"
 	"time"
+
+	"github.com/rs/zerolog/log"
+	"github.com/urfave/cli/v3"
+
+	"github.com/ptrvsrg/crack-hash/commonlib/logging"
+	"github.com/ptrvsrg/crack-hash/worker/internal/version"
 )
 
 var (
@@ -30,7 +31,7 @@ var (
 )
 
 func init() {
-	logging.Setup(config.EnvDev)
+	logging.Setup(true)
 }
 
 func main() {

@@ -7,10 +7,10 @@ import (
 
 // Global error variables
 var (
-	errEmptyAlphabet        = errors.New("alphabet must not be empty")
-	errInvalidMaxLength     = errors.New("maxLength must be positive")
-	errInvalidStartIndex    = errors.New("startIndex must be non-negative")
-	errStartIndexOutOfRange = errors.New("startIndex exceeds the total number of combinations")
+	ErrEmptyAlphabet        = errors.New("alphabet must not be empty")
+	ErrInvalidMaxLength     = errors.New("maxLength must be positive")
+	ErrInvalidStartIndex    = errors.New("startIndex must be non-negative")
+	ErrStartIndexOutOfRange = errors.New("startIndex exceeds the total number of combinations")
 )
 
 // AlphabetIterator iterates over all combinations of strings from the given alphabet
@@ -30,13 +30,13 @@ type AlphabetIterator struct {
 // The `startIndex` parameter specifies the index of the first combination to generate.
 func NewAlphabetIterator(alphabet string, maxLength int, startIndex int) (*AlphabetIterator, error) {
 	if len(alphabet) == 0 {
-		return nil, errEmptyAlphabet
+		return nil, ErrEmptyAlphabet
 	}
 	if maxLength <= 0 {
-		return nil, errInvalidMaxLength
+		return nil, ErrInvalidMaxLength
 	}
 	if startIndex < 0 {
-		return nil, errInvalidStartIndex
+		return nil, ErrInvalidStartIndex
 	}
 
 	it := &AlphabetIterator{
@@ -51,7 +51,7 @@ func NewAlphabetIterator(alphabet string, maxLength int, startIndex int) (*Alpha
 	// Fast-forward the iterator to the starting index
 	for i := 0; i < startIndex; i++ {
 		if !it.Next() {
-			return nil, errStartIndexOutOfRange
+			return nil, ErrStartIndexOutOfRange
 		}
 	}
 

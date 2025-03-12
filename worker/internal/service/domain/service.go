@@ -2,6 +2,7 @@ package domain
 
 import (
 	"context"
+
 	"github.com/ptrvsrg/crack-hash/worker/pkg/model"
 )
 

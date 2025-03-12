@@ -2,15 +2,17 @@ package hashcrack
 
 import (
 	"errors"
+	"net/http"
+
 	"github.com/gin-gonic/gin"
-	"github.com/ptrvsrg/crack-hash/manager/internal/helper"
-	"github.com/ptrvsrg/crack-hash/manager/internal/persistence/repository"
-	"github.com/ptrvsrg/crack-hash/manager/internal/service/domain"
-	"github.com/ptrvsrg/crack-hash/manager/internal/transport/http/handler"
-	"github.com/ptrvsrg/crack-hash/manager/pkg/model"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"net/http"
+
+	"github.com/ptrvsrg/crack-hash/commonlib/http/handler"
+	"github.com/ptrvsrg/crack-hash/commonlib/http/helper"
+	"github.com/ptrvsrg/crack-hash/manager/internal/persistence/repository"
+	"github.com/ptrvsrg/crack-hash/manager/internal/service/domain"
+	"github.com/ptrvsrg/crack-hash/manager/pkg/model"
 )
 
 var (
@@ -34,17 +36,17 @@ func (h *hdlr) RegisterRoutes(r *gin.Engine) {
 
 	exAPI := r.Group("/api/manager/hash/crack")
 	{
-		exAPI.POST("", h.handleHashCrack)
-		exAPI.GET("/status", h.handleCheckHashCrackStatus)
+		exAPI.POST("", h.handleCreateTask)
+		exAPI.GET("/status", h.handleGetTaskStatus)
 	}
 
 	inAPI := r.Group("/internal/api/manager/hash/crack")
 	{
-		inAPI.POST("/webhook", h.handleHashCrackTaskWebhook)
+		inAPI.POST("/webhook", h.handleTaskResultWebhook)
 	}
 }
 
-// handleHashCrack godoc
+// handleCreateTask godoc
 //
 //	@Id				HashCrack
 //	@Summary	    Create new hash crack task
@@ -57,8 +59,8 @@ func (h *hdlr) RegisterRoutes(r *gin.Engine) {
 //	@Failure		400 {object} model.ErrorOutput
 //	@Failure		500 {object} model.ErrorOutput
 //	@Router			/api/manager/hash/crack [post]
-func (h *hdlr) handleHashCrack(ctx *gin.Context) {
-	h.logger.Debug().Msg("handle crack hash")
+func (h *hdlr) handleCreateTask(ctx *gin.Context) {
+	h.logger.Debug().Msg("handle create task")
 
 	input := &model.HashCrackTaskInput{}
 	if err := ctx.ShouldBindJSON(input); err != nil {
@@ -68,14 +70,19 @@ func (h *hdlr) handleHashCrack(ctx *gin.Context) {
 
 	output, err := h.svc.CreateTask(ctx, input)
 	if err != nil {
-		_ = helper.ErrorWithStatus(ctx, http.StatusInternalServerError, err)
+		switch {
+		case errors.Is(err, domain.ErrTooManyTasks):
+			_ = helper.ErrorWithStatus(ctx, http.StatusTooManyRequests, err)
+		default:
+			_ = helper.ErrorWithStatus(ctx, http.StatusInternalServerError, err)
+		}
 		return
 	}
 
 	ctx.JSON(202, output)
 }
 
-// handleCheckHashCrackStatus godoc
+// handleGetTaskStatus godoc
 //
 //	@Id				CheckHashCrackStatus
 //	@Summary	    Get status of hash crack task
@@ -88,8 +95,8 @@ func (h *hdlr) handleHashCrack(ctx *gin.Context) {
 //	@Failure		404 {object} model.ErrorOutput
 //	@Failure		500 {object} model.ErrorOutput
 //	@Router			/api/manager/hash/crack/status [get]
-func (h *hdlr) handleCheckHashCrackStatus(c *gin.Context) {
-	h.logger.Debug().Msg("handle check hash crack status")
+func (h *hdlr) handleGetTaskStatus(c *gin.Context) {
+	h.logger.Debug().Msg("handle get task status")
 
 	id, ok := c.GetQuery("requestID")
 	if !ok {
@@ -112,7 +119,7 @@ func (h *hdlr) handleCheckHashCrackStatus(c *gin.Context) {
 	c.JSON(200, output)
 }
 
-// handleHashCrackTaskWebhook godoc
+// handleTaskResultWebhook godoc
 //
 //	@Id				HashCrackTaskWebhook
 //	@Summary	    Get status of hash crack task
@@ -125,8 +132,8 @@ func (h *hdlr) handleCheckHashCrackStatus(c *gin.Context) {
 //	@Failure		400 {object} model.ErrorOutput
 //	@Failure		500 {object} model.ErrorOutput
 //	@Router			/internal/api/manager/hash/crack/webhook [post]
-func (h *hdlr) handleHashCrackTaskWebhook(ctx *gin.Context) {
-	h.logger.Debug().Msg("handle hash crack task webhook")
+func (h *hdlr) handleTaskResultWebhook(ctx *gin.Context) {
+	h.logger.Debug().Msg("handle task webhook")
 
 	input := &model.HashCrackTaskWebhookInput{}
 	if err := ctx.ShouldBindXML(input); err != nil {
@@ -134,7 +141,7 @@ func (h *hdlr) handleHashCrackTaskWebhook(ctx *gin.Context) {
 		return
 	}
 
-	if err := h.svc.SaveResultTask(ctx, input); err != nil {
+	if err := h.svc.SaveResultSubtask(ctx, input); err != nil {
 		_ = helper.ErrorWithStatus(ctx, http.StatusInternalServerError, err)
 		return
 	}

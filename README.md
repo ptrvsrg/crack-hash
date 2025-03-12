@@ -34,25 +34,7 @@ docker compose up -d --force-recreate --build
 
 #### Manually
 
-+ Build manager and worker:
-
-```bash
-make -f ./manager/Makefile -C ./manager build
-```
-
-```bash
-make -f ./worker/Makefile -C ./worker build
-```
-
-+ Run manager and worker:
-
-```bash
-./manager/bin/manager server
-```
-
-```bash
-./manager/bin/worker server
-```
+See [manager](./manager/README.md) and [worker](./worker/README.md)
 
 ## License
 

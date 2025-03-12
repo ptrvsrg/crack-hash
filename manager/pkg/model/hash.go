@@ -6,44 +6,21 @@ type HashCrackTaskInput struct {
 }
 
 type HashCrackTaskIDOutput struct {
-	RequestID string `json:"requestId"`
+	RequestID string `json:"requestId" validate:"required"`
 }
 
 type HashCrackTaskStatusOutput struct {
-	Status HashCrackTaskStatus `json:"status"`
-	Data   []string            `json:"data"`
-}
-
-type HashCrackTaskStatus string
-
-const (
-	HashCrackStatusInProgress HashCrackTaskStatus = "IN_PROGRESS"
-	HashCrackStatusReady      HashCrackTaskStatus = "READY"
-	HashCrackStatusError      HashCrackTaskStatus = "ERROR"
-	HashCrackStatusUnknown    HashCrackTaskStatus = "UNKNOWN"
-)
-
-func (c HashCrackTaskStatus) String() string {
-	return string(c)
-}
-
-func ParseHashCrackTaskStatus(s string) HashCrackTaskStatus {
-	switch s {
-	case "IN_PROGRESS":
-		return HashCrackStatusInProgress
-	case "READY":
-		return HashCrackStatusReady
-	case "ERROR":
-		return HashCrackStatusError
-	default:
-		return HashCrackStatusUnknown
-	}
+	Status string   `json:"status" validate:"required,oneof=IN_PROGRESS READY PARTIAL_READY ERROR UNKNOWN"`
+	Data   []string `json:"data" validate:"required,min=0,dive,required"`
 }
 
 type HashCrackTaskWebhookInput struct {
-	RequestID  string `xml:"RequestId" binding:"required"`
-	PartNumber int    `xml:"PartNumber"`
-	Answer     struct {
-		Words []string `xml:"words"`
-	} `xml:"Answer" binding:"required"`
+	RequestID  string  `xml:"RequestID" validate:"required"`
+	PartNumber int     `xml:"PartNumber"`
+	Answer     *Answer `xml:"Answer"`
+	Error      *string `xml:"Error"`
+}
+
+type Answer struct {
+	Words []string `xml:"words" validate:"required,min=0,dive,required"`
 }

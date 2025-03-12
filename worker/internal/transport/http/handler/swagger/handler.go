@@ -2,12 +2,14 @@ package swagger
 
 import (
 	"fmt"
+	"net/http"
+
 	"github.com/gin-gonic/gin"
-	"github.com/ptrvsrg/crack-hash/worker/docs"
-	"github.com/ptrvsrg/crack-hash/worker/internal/transport/http/handler"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"net/http"
+
+	"github.com/ptrvsrg/crack-hash/commonlib/http/handler"
+	"github.com/ptrvsrg/crack-hash/worker/docs"
 )
 
 type hdlr struct {

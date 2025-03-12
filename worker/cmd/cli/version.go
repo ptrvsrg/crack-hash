@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/ptrvsrg/crack-hash/worker/internal/version"
+
 	"github.com/urfave/cli/v3"
+
+	"github.com/ptrvsrg/crack-hash/worker/internal/version"
 )
 
 var (

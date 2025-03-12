@@ -2,10 +2,11 @@ package health
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/ptrvsrg/crack-hash/manager/internal/transport/http/handler"
-	_ "github.com/ptrvsrg/crack-hash/manager/pkg/model"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+
+	"github.com/ptrvsrg/crack-hash/commonlib/http/handler"
+	_ "github.com/ptrvsrg/crack-hash/manager/pkg/model"
 )
 
 type hdlr struct {
@@ -40,7 +41,7 @@ func (h *hdlr) RegisterRoutes(r *gin.Engine) {
 //	@Router			/api/manager/health/readiness [get]
 func (h *hdlr) handleHealthReadiness(ctx *gin.Context) {
 	h.logger.Debug().Msg("handle health readiness")
-	ctx.Status(200)
+	ctx.String(200, "OK")
 }
 
 // handleHealthLiveness godoc
@@ -53,5 +54,5 @@ func (h *hdlr) handleHealthReadiness(ctx *gin.Context) {
 //	@Router			/api/manager/health/liveness [get]
 func (h *hdlr) handleHealthLiveness(ctx *gin.Context) {
 	h.logger.Debug().Msg("handle health liveness")
-	ctx.Status(200)
+	ctx.String(200, "OK")
 }

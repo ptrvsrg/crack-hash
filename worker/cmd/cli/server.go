@@ -4,18 +4,22 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/ptrvsrg/crack-hash/worker/config"
-	"github.com/ptrvsrg/crack-hash/worker/internal/di"
-	"github.com/ptrvsrg/crack-hash/worker/internal/logging"
-	http2 "github.com/ptrvsrg/crack-hash/worker/internal/transport/http"
-	"github.com/ptrvsrg/crack-hash/worker/internal/version"
-	"github.com/rs/zerolog/log"
-	"github.com/urfave/cli/v3"
-	"net/http"
+	syshttp "net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/rs/zerolog/log"
+	"github.com/urfave/cli/v3"
+
+	commonconfig "github.com/ptrvsrg/crack-hash/commonlib/config"
+	"github.com/ptrvsrg/crack-hash/commonlib/http/server"
+	"github.com/ptrvsrg/crack-hash/commonlib/logging"
+	"github.com/ptrvsrg/crack-hash/worker/config"
+	"github.com/ptrvsrg/crack-hash/worker/internal/di"
+	"github.com/ptrvsrg/crack-hash/worker/internal/transport/http"
+	"github.com/ptrvsrg/crack-hash/worker/internal/version"
 )
 
 var (
@@ -43,10 +47,10 @@ func runServer(ctx context.Context, _ *cli.Command) error {
 	fmt.Println(banner)
 
 	// Load config
-	cfg := config.LoadOrDie()
+	cfg := commonconfig.LoadOrDie[config.Config]()
 
 	// Setup logger
-	logging.Setup(cfg.Server.Env)
+	logging.Setup(cfg.Server.Env == config.EnvDev)
 
 	// Setup DI
 	c := di.NewContainer(cfg)
@@ -57,17 +61,14 @@ func runServer(ctx context.Context, _ *cli.Command) error {
 	}(c)
 
 	// Run server
-	srv := http2.NewServer(c)
-
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	srv := server.NewHTTP2(cfg.Server.Port, http.SetupRouter(c))
 
 	go func() {
-		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, syshttp.ErrServerClosed) {
 			log.Fatal().Err(err).Stack().Msg("failed to start server")
 		}
 	}()
-	defer func(ctx context.Context, srv *http.Server) {
+	defer func(ctx context.Context, srv *syshttp.Server) {
 		shutdownCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 
@@ -80,6 +81,8 @@ func runServer(ctx context.Context, _ *cli.Command) error {
 	log.Info().Msgf("server listens on port %d", cfg.Server.Port)
 
 	// Wait for signal
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	<-quit
 
 	return nil

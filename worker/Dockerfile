@@ -2,6 +2,7 @@ FROM golang:1.23.5-alpine3.21 AS deps
 
 WORKDIR /app
 
+COPY ./commonlib ./commonlib
 COPY ./manager ./manager
 COPY ./worker ./worker
 

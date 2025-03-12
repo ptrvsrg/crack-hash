@@ -1,10 +1,10 @@
 package model
 
-import "time"
+import (
+	"time"
+)
 
 type ErrorOutput struct {
-	XMLName struct{} `xml:"ErrorResponse" json:"-"`
-
 	Timestamp time.Time `xml:"Timestamp" json:"timestamp" binding:"required"`
 	Message   string    `xml:"Message" json:"message" binding:"required"`
 	Status    int       `xml:"Status" json:"status" binding:"required,min=400,max=599"`

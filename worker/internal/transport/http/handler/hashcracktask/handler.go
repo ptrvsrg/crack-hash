@@ -1,14 +1,16 @@
 package hashcracktask
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
-	"github.com/ptrvsrg/crack-hash/worker/internal/helper"
-	"github.com/ptrvsrg/crack-hash/worker/internal/service/domain"
-	"github.com/ptrvsrg/crack-hash/worker/internal/transport/http/handler"
-	"github.com/ptrvsrg/crack-hash/worker/pkg/model"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"net/http"
+
+	"github.com/ptrvsrg/crack-hash/commonlib/http/handler"
+	"github.com/ptrvsrg/crack-hash/commonlib/http/helper"
+	"github.com/ptrvsrg/crack-hash/worker/internal/service/domain"
+	"github.com/ptrvsrg/crack-hash/worker/pkg/model"
 )
 
 type hdlr struct {

@@ -2,6 +2,8 @@ package factory
 
 import (
 	"errors"
+
+	"github.com/ptrvsrg/crack-hash/manager/config"
 	"github.com/ptrvsrg/crack-hash/manager/internal/service/infrastructure"
 	"github.com/ptrvsrg/crack-hash/manager/internal/service/infrastructure/tasksplit/chunkbased"
 )
@@ -16,10 +18,10 @@ const (
 	StrategyChunkBased Strategy = "chunk-based"
 )
 
-func NewService(strategy Strategy) (infrastructure.TaskSplit, error) {
-	switch strategy {
+func NewService(cfg config.TaskSplitConfig) (infrastructure.TaskSplit, error) {
+	switch Strategy(cfg.Strategy) {
 	case StrategyChunkBased:
-		return chunkbased.NewService(), nil
+		return chunkbased.NewService(cfg.ChunkSize), nil
 	default:
 		return nil, ErrInvalidStrategy
 	}

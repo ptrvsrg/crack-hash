@@ -4,4 +4,7 @@ server:
 manager:
   address:
 task:
-  splitStrategy: chunk-based
+  split:
+    strategy: chunk-based
+    chunk-size: 10000000
+  concurrency: 1000

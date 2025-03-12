@@ -12,6 +12,11 @@ build:
 	-X github.com/ptrvsrg/crack-hash/worker/internal/version.Platform=$(shell go env GOOS)/$(shell go env GOARCH)" \
 	./cmd/cli
 
+# Build the docker image
+build-image:
+	@echo "Building image..."
+	@docker build -t ptrvsrg/crack-hash-worker:$(ARTIFACT_VERSION) -f Dockerfile ..
+
 # Run the application
 COMMAND ?= server
 run:
@@ -45,7 +50,7 @@ test:
 # Clean the binary
 clean:
 	@echo "Cleaning..."
-	@rm -f main
+	@rm -f bin
 
 # Live Reload
 watch:
@@ -66,14 +71,15 @@ watch:
 
  help:
 	@echo "Available commands:"
-	@echo "  build   - Build the application"
-	@echo "  run     - Run the application (set the COMMAND environment variable to change the command)"
-	@echo "  swagger - Generate Swagger specification"
-	@echo "  mock    - Generate mocks"
-	@echo "  lint    - Lint the application"
-	@echo "  test    - Test the application"
-	@echo "  clean   - Clean the binary"
-	@echo "  watch   - Live Reload"
+	@echo "  build   		- Build the application"
+	@echo "  build-image 	- Build the docker image"
+	@echo "  run     		- Run the application (set the COMMAND environment variable to change the command, default is 'server')"
+	@echo "  swagger 		- Generate Swagger specification"
+	@echo "  mock    		- Generate mocks"
+	@echo "  lint    		- Lint the application"
+	@echo "  test    		- Test the application"
+	@echo "  clean   		- Clean the binary"
+	@echo "  watch   		- Live Reload"
 
 .DEFAULT_GOAL := help
-.PHONY: build run swagger mock lint test clean watch
+.PHONY: help build build-image run swagger mock lint test clean watch

@@ -1,65 +1,39 @@
 package config
 
 import (
-	"fmt"
-	"github.com/go-playground/validator/v10"
-	"github.com/ilyakaznacheev/cleanenv"
 	_ "github.com/joho/godotenv/autoload"
-	"github.com/ptrvsrg/crack-hash/worker/internal/helper"
-	"github.com/ptrvsrg/crack-hash/worker/internal/service/infrastructure/bruteforce/factory"
-	"github.com/rs/zerolog/log"
 )
-
-type Env string
 
 const (
 	EnvDev  Env = "dev"
 	EnvProd Env = "prod"
 )
 
-type Config struct {
-	Server  ServerConfig  `yaml:"server"`
-	Manager ManagerConfig `yaml:"manager"`
-	Task    TaskConfig    `yaml:"task"`
-}
+type (
+	Env string
 
-type ServerConfig struct {
-	Env  Env `yaml:"env" env:"SERVER_ENV" env-default:"dev" validate:"oneof=dev prod"`
-	Port int `yaml:"port" env:"SERVER_PORT" env-default:"8080" validate:"required,min=-1,max=65535"`
-}
-
-type ManagerConfig struct {
-	Address string `yaml:"address" env:"MANAGER_ADDRESS" validate:"required,hostname_port"`
-}
-
-type TaskConfig struct {
-	SplitStrategy factory.Strategy `yaml:"splitStrategy" env:"TASK_SPLIT_STRATEGY" env-default:"chunk-based" validate:"oneof=chunk-based"`
-}
-
-func LoadOrDie() Config {
-	cfg, err := Load()
-	if err != nil {
-		log.Fatal().Err(err).Stack().Msgf("failed to load config: %v", err)
+	Config struct {
+		Server  ServerConfig  `yaml:"server"`
+		Manager ManagerConfig `yaml:"manager"`
+		Task    TaskConfig    `yaml:"task"`
 	}
 
-	return cfg
-}
-
-func Load() (Config, error) {
-	var cfg Config
-	configName := getConfigName()
-
-	if err := cleanenv.ReadConfig(configName, &cfg); err != nil {
-		return Config{}, fmt.Errorf("failed to load config: %w", err)
+	ServerConfig struct {
+		Env  Env `yaml:"env" env:"SERVER_ENV" env-default:"dev" validate:"oneof=dev prod"`
+		Port int `yaml:"port" env:"SERVER_PORT" env-default:"8080" validate:"required,min=-1,max=65535"`
 	}
 
-	if err := validator.New().Struct(&cfg); err != nil {
-		return Config{}, fmt.Errorf("failed to validate config: %w", err)
+	ManagerConfig struct {
+		Address string `yaml:"address" env:"MANAGER_ADDRESS" validate:"required,http_url"`
 	}
 
-	return cfg, nil
-}
+	TaskConfig struct {
+		Split       TaskSplitConfig `yaml:"split"`
+		Concurrency int             `yaml:"concurrency" env:"TASK_CONCURRENCY" env-default:"1000" validate:"min=1"`
+	}
 
-func getConfigName() string {
-	return helper.GetEnvOrDefault("CONFIG_FILE", "config/config.yaml")
-}
+	TaskSplitConfig struct {
+		Strategy  string `yaml:"strategy" env:"TASK_SPLIT_STRATEGY" env-default:"chunk-based" validate:"oneof=chunk-based"`
+		ChunkSize int    `yaml:"chunkSize" env:"TASK_SPLIT_CHUNK_SIZE" env-default:"10000000" validate:"min=1"`
+	}
+)

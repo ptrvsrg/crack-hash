@@ -40,22 +40,55 @@ server:
   port: 8080
   env: dev
 worker:
-  address:
+  addresses:
+  health:
+    path:
+    interval: 1m
+    timeout: 1m
+    retries: 3
 task:
-  splitStrategy: chunk-based
+  split:
+    strategy: chunk-based
+    chunkSize: 10000000
+  timeout: 1h
+  limit: 10
+  maxAge: 24h
+  finishDelay: 1m
 ```
 
 ENV variables (for example [`config/.env.default`](./config/.env.default)):
 
 ```dotenv
+CONFIG_FILE=config/config.yaml
+
 SERVER_PORT=8080
 SERVER_ENV=dev
-WORKER_ADDRESS=
+
+WORKER_ADDRESSES=
+WORKER_HEALTH_PATH=
+WORKER_HEALTH_INTERVAL=1m
+WORKER_HEALTH_TIMEOUT=1m
+WORKER_HEALTH_RETRIES=3
+
 TASK_SPLIT_STRATEGY=chunk-based
+TASK_SPLIT_CHUNK_SIZE=10000000
+TASK_TIMEOUT=1h
+TASK_LIMIT=10
+TASK_MAX_AGE=24h
+TASK_FINISH_DELAY=1m
 ```
 
-## Testing
+## Makefile
 
 ```bash
-make test
+Available commands:
+  build                 - Build the application
+  build-image           - Build the docker image
+  run                   - Run the application (set the COMMAND environment variable to change the command, default is 'server')
+  swagger               - Generate Swagger specification
+  mock                  - Generate mocks
+  lint                  - Lint the application
+  test                  - Test the application
+  clean                 - Clean the binary
+  watch                 - Live Reload
 ```

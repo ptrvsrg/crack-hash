@@ -2,6 +2,17 @@ server:
   port: 8080
   env: dev
 worker:
-  address:
+  addresses:
+  health:
+    path:
+    interval: 1m
+    timeout: 1m
+    retries: 3
 task:
-  splitStrategy: chunk-based
+  split:
+    strategy: chunk-based
+    chunkSize: 10000000
+  timeout: 1h
+  limit: 10
+  maxAge: 24h
+  finishDelay: 1m

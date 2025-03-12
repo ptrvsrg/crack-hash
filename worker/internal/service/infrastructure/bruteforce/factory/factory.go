@@ -2,6 +2,8 @@ package factory
 
 import (
 	"errors"
+
+	"github.com/ptrvsrg/crack-hash/worker/config"
 	"github.com/ptrvsrg/crack-hash/worker/internal/service/infrastructure"
 	"github.com/ptrvsrg/crack-hash/worker/internal/service/infrastructure/bruteforce/chunkbased"
 )
@@ -16,10 +18,12 @@ const (
 	StrategyChunkBased Strategy = "chunk-based"
 )
 
-func NewService(strategy Strategy) (infrastructure.HashBruteForce, error) {
-	switch strategy {
+func NewService(cfg config.TaskSplitConfig) (infrastructure.HashBruteForce, error) {
+	switch Strategy(cfg.Strategy) {
+
 	case StrategyChunkBased:
-		return chunkbased.NewService(), nil
+		return chunkbased.NewService(cfg.ChunkSize), nil
+
 	default:
 		return nil, ErrInvalidStrategy
 	}

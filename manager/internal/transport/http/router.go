@@ -2,13 +2,15 @@ package http
 
 import (
 	"errors"
-	"github.com/ptrvsrg/crack-hash/manager/docs"
-	"github.com/ptrvsrg/crack-hash/manager/internal/di"
-	middleware2 "github.com/ptrvsrg/crack-hash/manager/internal/transport/http/middleware"
-	"github.com/ptrvsrg/crack-hash/manager/internal/version"
-	"github.com/rs/zerolog/log"
 	"net/http"
 	"sort"
+
+	"github.com/rs/zerolog/log"
+
+	"github.com/ptrvsrg/crack-hash/commonlib/http/middleware"
+	"github.com/ptrvsrg/crack-hash/manager/docs"
+	"github.com/ptrvsrg/crack-hash/manager/internal/di"
+	"github.com/ptrvsrg/crack-hash/manager/internal/version"
 
 	"github.com/gin-gonic/gin"
 )
@@ -55,9 +57,9 @@ func SetupRouter(c *di.Container) http.Handler {
 	// Setup middlewares
 	log.Info().Msg("setup middlewares")
 
-	r.Use(middleware2.LoggerMiddleware(ignorePathRegexps...))
-	r.Use(middleware2.RecoveryMiddleware())
-	r.Use(middleware2.ErrorMiddleware())
+	r.Use(middleware.LoggerMiddleware(ignorePathRegexps...))
+	r.Use(middleware.RecoveryMiddleware())
+	r.Use(middleware.ErrorMiddleware())
 
 	// Setup routes
 	log.Info().Msg("setup routes")

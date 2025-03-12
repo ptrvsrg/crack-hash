@@ -4,20 +4,25 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/go-co-op/gocron/v2"
-	"github.com/ptrvsrg/crack-hash/manager/config"
-	"github.com/ptrvsrg/crack-hash/manager/internal/cron"
-	"github.com/ptrvsrg/crack-hash/manager/internal/di"
-	"github.com/ptrvsrg/crack-hash/manager/internal/logging"
-	http2 "github.com/ptrvsrg/crack-hash/manager/internal/transport/http"
-	"github.com/ptrvsrg/crack-hash/manager/internal/version"
-	"github.com/rs/zerolog/log"
-	"github.com/urfave/cli/v3"
-	"net/http"
+	syshttp "net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/go-co-op/gocron"
+	"github.com/rs/zerolog/log"
+	"github.com/urfave/cli/v3"
+
+	commonconfig "github.com/ptrvsrg/crack-hash/commonlib/config"
+	"github.com/ptrvsrg/crack-hash/commonlib/cron"
+	"github.com/ptrvsrg/crack-hash/commonlib/http/server"
+	"github.com/ptrvsrg/crack-hash/commonlib/logging"
+	"github.com/ptrvsrg/crack-hash/manager/config"
+	"github.com/ptrvsrg/crack-hash/manager/internal/di"
+	"github.com/ptrvsrg/crack-hash/manager/internal/job/hashcrack"
+	"github.com/ptrvsrg/crack-hash/manager/internal/transport/http"
+	"github.com/ptrvsrg/crack-hash/manager/internal/version"
 )
 
 var (
@@ -45,10 +50,10 @@ func runServer(ctx context.Context, _ *cli.Command) error {
 	fmt.Println(banner)
 
 	// Load config
-	cfg := config.LoadOrDie()
+	cfg := commonconfig.LoadOrDie[config.Config]()
 
 	// Setup logger
-	logging.Setup(cfg.Server.Env)
+	logging.Setup(cfg.Server.Env == config.EnvDev)
 
 	// Setup DI
 	c := di.NewContainer(cfg)
@@ -59,17 +64,14 @@ func runServer(ctx context.Context, _ *cli.Command) error {
 	}(c)
 
 	// Run server
-	srv := http2.NewServer(c)
-
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	srv := server.NewHTTP2(cfg.Server.Port, http.SetupRouter(c))
 
 	go func() {
-		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, syshttp.ErrServerClosed) {
 			log.Fatal().Err(err).Stack().Msg("failed to start server")
 		}
 	}()
-	defer func(ctx context.Context, srv *http.Server) {
+	defer func(ctx context.Context, srv *syshttp.Server) {
 		shutdownCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 
@@ -82,25 +84,24 @@ func runServer(ctx context.Context, _ *cli.Command) error {
 	log.Info().Msgf("server listens on port %d", cfg.Server.Port)
 
 	// Start cron
-	scheduler := cron.NewSchedulerOrDie()
+	scheduler := cron.NewScheduler(
+		ctx,
+		hashcrack.RegisterDeleteExpiredTaskJob(c),
+		hashcrack.RegisterFinishTimeoutTasksJob(c),
+	)
 
-	for _, e := range c.Executors {
-		if err := e.RegisterJobs(scheduler); err != nil {
-			log.Fatal().Err(err).Stack().Msg("failed to register cron jobs")
-		}
-	}
-
-	scheduler.Start()
-	defer func(scheduler gocron.Scheduler) {
-		log.Info().Msg("stop cron tasks")
-		if err := scheduler.Shutdown(); err != nil {
-			log.Error().Err(err).Stack().Msg("failed to shutdown cron scheduler")
-		}
+	log.Info().Msg("start cron jobs")
+	scheduler.StartAsync()
+	defer func(scheduler *gocron.Scheduler) {
+		log.Info().Msg("stop cron jobs")
+		scheduler.Stop()
 	}(scheduler)
 
 	log.Info().Msg("cron scheduler started")
 
 	// Wait for signal
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	<-quit
 
 	return nil

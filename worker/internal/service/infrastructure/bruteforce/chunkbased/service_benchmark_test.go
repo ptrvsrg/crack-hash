@@ -1,18 +1,19 @@
 package chunkbased_test
 
 import (
-	"github.com/ptrvsrg/crack-hash/worker/internal/service/infrastructure/bruteforce/chunkbased"
-	"github.com/rs/zerolog"
 	"strings"
 	"testing"
+
+	"github.com/ptrvsrg/crack-hash/commonlib/logging"
+	"github.com/ptrvsrg/crack-hash/worker/internal/service/infrastructure/bruteforce/chunkbased"
 )
 
 func init() {
-	zerolog.SetGlobalLevel(zerolog.Disabled)
+	logging.Setup(true)
 }
 
 func Benchmark(b *testing.B) {
-	svc := chunkbased.NewService()
+	svc := chunkbased.NewService(10_000_000)
 	hash := "abcde"
 	alphabet := "abcdefghijklmnopqrstuvwxyz1234567890"
 	maxLength := 5

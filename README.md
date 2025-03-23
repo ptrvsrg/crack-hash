@@ -19,6 +19,10 @@ Distributed system for cracking MD5 hashes
 
 ![architecture](.assets/arch-developers.png)
 
+## Draw.io
+
+See [arch.drawio](./.assets/arch.drawio)
+
 ## Quickstart
 
 ### Requirements

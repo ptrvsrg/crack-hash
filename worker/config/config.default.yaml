@@ -1,0 +1,10 @@
+server:
+  port: 8080
+  env: dev
+manager:
+  address:
+task:
+  split:
+    strategy: chunk-based
+    chunk-size: 10000000
+  concurrency: 1000

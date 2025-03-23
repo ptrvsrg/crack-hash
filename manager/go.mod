@@ -14,12 +14,12 @@ require (
 	github.com/swaggo/swag v1.16.4
 	github.com/urfave/cli/v3 v3.0.0-beta1
 	go.mongodb.org/mongo-driver v1.17.3
-	go.mongodb.org/mongo-driver/v2 v2.1.0
 	golang.org/x/exp v0.0.0-20250305212735-054e65f0b394
 	gopkg.in/resty.v1 v1.12.0
 )
 
 require (
+	atomicgo.dev/robin v0.1.0 // indirect
 	github.com/KyleBanks/depth v1.2.1 // indirect
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
@@ -92,7 +92,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace (
-	github.com/ptrvsrg/crack-hash/commonlib v0.0.0-local => ../commonlib
-	github.com/ptrvsrg/crack-hash/worker v0.0.0-local => ../worker
-)
+replace github.com/ptrvsrg/crack-hash/commonlib v0.0.0-local => ../commonlib

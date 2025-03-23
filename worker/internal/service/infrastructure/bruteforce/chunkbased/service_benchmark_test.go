@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/ptrvsrg/crack-hash/commonlib/logging"
 	"github.com/ptrvsrg/crack-hash/worker/internal/service/infrastructure/bruteforce/chunkbased"
 )
@@ -14,7 +16,7 @@ func init() {
 }
 
 func Benchmark(b *testing.B) {
-	svc := chunkbased.NewService(10_000_000)
+	svc := chunkbased.NewService(log.Logger, 10_000_000)
 	hash := "abcde"
 	alphabet := "abcdefghijklmnopqrstuvwxyz1234567890"
 	maxLength := 5

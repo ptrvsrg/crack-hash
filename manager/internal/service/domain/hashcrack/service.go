@@ -9,9 +9,8 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 	"github.com/samber/lo"
-	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/exp/maps"
 
 	"github.com/ptrvsrg/crack-hash/commonlib/bus/amqp/publisher"
@@ -33,6 +32,7 @@ type svc struct {
 }
 
 func NewService(
+	logger zerolog.Logger,
 	cfg config.TaskConfig,
 	taskRepo repository.HashCrackTask,
 	splitSvc infrastructure.TaskSplit,
@@ -40,7 +40,7 @@ func NewService(
 ) domain.HashCrackTask {
 
 	return &svc{
-		logger: log.With().
+		logger: logger.With().
 			Str("type", "domain").
 			Str("service", "hash-crack").
 			Logger(),
@@ -95,7 +95,7 @@ func (s *svc) GetTaskStatus(ctx context.Context, id string) (*model.HashCrackTas
 	s.logger.Info().Str("id", id).Msg("get task status")
 
 	// Validate ID
-	objID, err := bson.ObjectIDFromHex(id)
+	objID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		s.logger.Error().Err(err).Stack().Msg("failed to validate ID")
 		return nil, domain.ErrInvalidRequestID
@@ -123,7 +123,7 @@ func (s *svc) SaveResultSubtask(ctx context.Context, input *message.HashCrackTas
 		Msg("save result subtask")
 
 	// Validate ID
-	objID, err := bson.ObjectIDFromHex(input.RequestID)
+	objID, err := primitive.ObjectIDFromHex(input.RequestID)
 	if err != nil {
 		s.logger.Error().Err(err).Stack().Msg("failed to validate ID")
 		return domain.ErrInvalidRequestID
@@ -321,7 +321,7 @@ func buildTaskIDOutput(task *entity.HashCrackTask) *model.HashCrackTaskIDOutput 
 
 func buildTaskEntity(input *model.HashCrackTaskInput, partCount int) *entity.HashCrackTask {
 	return &entity.HashCrackTask{
-		ObjectID:   bson.NewObjectID(),
+		ObjectID:   primitive.NewObjectID(),
 		Hash:       input.Hash,
 		MaxLength:  input.MaxLength,
 		PartCount:  partCount,

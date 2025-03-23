@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/rs/zerolog/log"
 	"github.com/samber/lo"
 	mock3 "github.com/stretchr/testify/mock"
 
@@ -38,6 +39,7 @@ func TestMain(m *testing.M) {
 	mockPublisher = new(mock.PublisherMock[message.HashCrackTaskResult])
 	mockBruteForce = new(mock2.HashBruteForceMock)
 	svc = hashcracktask.NewService(
+		log.Logger,
 		time.Second,
 		mockPublisher,
 		mockBruteForce,

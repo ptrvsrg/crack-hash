@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 	"github.com/samber/lo"
 
 	"github.com/ptrvsrg/crack-hash/commonlib/bus/amqp/publisher"
@@ -22,12 +21,13 @@ type svc struct {
 }
 
 func NewService(
+	logger zerolog.Logger,
 	progressPeriod time.Duration,
 	publisher publisher.Publisher[message.HashCrackTaskResult],
 	bruteforce infrastructure.HashBruteForce,
 ) domain.HashCrackTask {
 	return &svc{
-		logger: log.With().
+		logger: logger.With().
 			Str("type", "domain").
 			Str("service", "hash-crack-task").
 			Logger(),

@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 
 	"github.com/ptrvsrg/crack-hash/worker/internal/combin"
 	"github.com/ptrvsrg/crack-hash/worker/internal/service/infrastructure"
@@ -19,9 +18,9 @@ type svc struct {
 	chunkSize int
 }
 
-func NewService(chunkSize int) infrastructure.HashBruteForce {
+func NewService(logger zerolog.Logger, chunkSize int) infrastructure.HashBruteForce {
 	return &svc{
-		logger: log.With().
+		logger: logger.With().
 			Str("type", "infrastructure").
 			Str("service", "brute-force").
 			Str("strategy", "chunk-based").Logger(),

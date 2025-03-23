@@ -132,9 +132,7 @@ func startAMQPConsumer(ctx context.Context, c *di.Container) (*sync.WaitGroup, c
 	for _, consumer := range c.Consumers {
 		wg.Add(1)
 		go func(consumer consumer2.Consumer, ctx context.Context) {
-			if err := consumer.Subscribe(ctx); err != nil {
-				log.Error().Err(err).Msg("failed to subscribe")
-			}
+			consumer.Subscribe(ctx)
 			wg.Done()
 		}(consumer, consumerCtx)
 	}

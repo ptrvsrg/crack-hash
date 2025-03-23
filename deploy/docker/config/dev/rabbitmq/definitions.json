@@ -48,7 +48,7 @@
       "auto_delete": false,
       "arguments": {
         "x-queue-type": "quorum",
-        "x-consumer-timeout": "600000"
+        "x-consumer-timeout": "10000"
       }
     },
     {
@@ -58,7 +58,7 @@
       "auto_delete": false,
       "arguments": {
         "x-queue-type": "quorum",
-        "x-consumer-timeout": "60000"
+        "x-consumer-timeout": "1000"
       }
     }
   ],

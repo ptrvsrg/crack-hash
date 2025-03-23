@@ -3,11 +3,11 @@ package entity
 import (
 	"time"
 
-	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type HashCrackTask struct {
-	ObjectID   bson.ObjectID             `bson:"_id"`
+	ObjectID   primitive.ObjectID        `bson:"_id"`
 	Hash       string                    `bson:"hash"`
 	MaxLength  int                       `bson:"maxLength"`
 	PartCount  int                       `bson:"partCount"`

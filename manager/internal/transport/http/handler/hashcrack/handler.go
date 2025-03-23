@@ -6,7 +6,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 
 	"github.com/ptrvsrg/crack-hash/commonlib/http/handler"
 	"github.com/ptrvsrg/crack-hash/commonlib/http/helper"
@@ -23,9 +22,9 @@ type hdlr struct {
 	svc    domain.HashCrackTask
 }
 
-func NewHandler(svc domain.HashCrackTask) handler.Handler {
+func NewHandler(logger zerolog.Logger, svc domain.HashCrackTask) handler.Handler {
 	return &hdlr{
-		logger: log.With().Str("handler", "hash-crack").Logger(),
+		logger: logger.With().Str("handler", "hash-crack").Logger(),
 		svc:    svc,
 	}
 }

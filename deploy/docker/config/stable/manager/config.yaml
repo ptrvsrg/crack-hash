@@ -18,7 +18,7 @@ amqp:
     - amqp://rabbitmq3:5672
   username: admin
   password: password
-  prefetch: 100
+  prefetch: 10
   consumers:
     taskresult:
       queue: queue.task.result

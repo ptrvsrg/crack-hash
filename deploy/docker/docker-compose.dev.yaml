@@ -35,11 +35,10 @@ services:
     hostname: rabbitmq1
     restart: unless-stopped
     environment:
-      RABBITMQ_CONFIG_FILE: /etc/rabbitmq/rabbitmq.conf
       RABBITMQ_ERLANG_COOKIE: secret
       NODENAME: rabbitmq@rabbitmq1
     healthcheck:
-      test: [ "CMD-SHELL", "rabbitmq-diagnostics -q status && rabbitmq-diagnostics -q check_local_alarms" ]
+      test: [ "CMD-SHELL", "rabbitmq-diagnostics -q check_port_connectivity && rabbitmq-diagnostics -q cluster_status && rabbitmq-diagnostics -q check_local_alarms" ]
     ports:
       - '5672:5672'
       - '15672:15672'
@@ -56,11 +55,10 @@ services:
     hostname: rabbitmq2
     restart: unless-stopped
     environment:
-      RABBITMQ_CONFIG_FILE: /etc/rabbitmq/rabbitmq.conf
       RABBITMQ_ERLANG_COOKIE: secret
       NODENAME: rabbitmq@rabbitmq2
     healthcheck:
-      test: [ "CMD-SHELL", "rabbitmq-diagnostics -q status && rabbitmq-diagnostics -q check_local_alarms" ]
+      test: [ "CMD-SHELL", "rabbitmq-diagnostics -q check_port_connectivity && rabbitmq-diagnostics -q cluster_status && rabbitmq-diagnostics -q check_local_alarms" ]
     ports:
       - '5673:5672'
       - '15673:15672'
@@ -77,11 +75,10 @@ services:
     hostname: rabbitmq3
     restart: unless-stopped
     environment:
-      RABBITMQ_CONFIG_FILE: /etc/rabbitmq/rabbitmq.conf
       RABBITMQ_ERLANG_COOKIE: secret
       NODENAME: rabbitmq@rabbitmq3
     healthcheck:
-      test: [ "CMD-SHELL", "rabbitmq-diagnostics -q status && rabbitmq-diagnostics -q check_local_alarms" ]
+      test: [ "CMD-SHELL", "rabbitmq-diagnostics -q check_port_connectivity && rabbitmq-diagnostics -q cluster_status && rabbitmq-diagnostics -q check_local_alarms" ]
     ports:
       - '5674:5672'
       - '15674:15672'

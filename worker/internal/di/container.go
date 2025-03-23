@@ -18,9 +18,10 @@ import (
 	"github.com/ptrvsrg/crack-hash/worker/internal/bus/amqp/publisher"
 	"github.com/ptrvsrg/crack-hash/worker/internal/service/domain"
 	"github.com/ptrvsrg/crack-hash/worker/internal/service/domain/hashcracktask"
+	"github.com/ptrvsrg/crack-hash/worker/internal/service/domain/health"
 	"github.com/ptrvsrg/crack-hash/worker/internal/service/infrastructure"
 	"github.com/ptrvsrg/crack-hash/worker/internal/service/infrastructure/bruteforce/factory"
-	"github.com/ptrvsrg/crack-hash/worker/internal/transport/http/handler/health"
+	healthhdlr "github.com/ptrvsrg/crack-hash/worker/internal/transport/http/handler/health"
 )
 
 type Providers struct {
@@ -136,20 +137,17 @@ func (c *Container) setupPublishers(_ context.Context) {
 func (c *Container) setupServices(_ context.Context) {
 	c.Logger.Info().Msg("setup services")
 
-	bruteForceSvc, err := factory.NewService(c.Config.Task.Split)
-	if err != nil {
-		c.Logger.Fatal().Err(err).Msg("failed to create brute force service")
-	}
-
 	c.InfraSVCs = infrastructure.Services{
-		HashBruteForce: bruteForceSvc,
+		HashBruteForce: factory.NewService(c.Logger, c.Config.Task.Split),
 	}
 	c.DomainSVCs = domain.Services{
 		HashCrackTask: hashcracktask.NewService(
+			c.Logger,
 			c.Config.Task.ProgressPeriod,
 			c.Publishers.TaskResult,
 			c.InfraSVCs.HashBruteForce,
 		),
+		Health: health.NewService(c.Logger, c.Providers.AMQPConn),
 	}
 }
 
@@ -157,7 +155,7 @@ func (c *Container) setupHandlers(_ context.Context) {
 	c.Logger.Info().Msg("setup handlers")
 
 	c.Handlers = []handler.Handler{
-		health.NewHandler(),
+		healthhdlr.NewHandler(c.Logger, c.DomainSVCs.Health),
 	}
 }
 

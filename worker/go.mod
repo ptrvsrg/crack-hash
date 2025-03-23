@@ -3,7 +3,6 @@ module github.com/ptrvsrg/crack-hash/worker
 go 1.23.5
 
 require (
-	github.com/dirkaholic/kyoo v1.0.0
 	github.com/gin-gonic/gin v1.10.0
 	github.com/joho/godotenv v1.5.1
 	github.com/ptrvsrg/crack-hash/commonlib v0.0.0-local
@@ -15,7 +14,6 @@ require (
 	github.com/swaggo/swag v1.16.4
 	github.com/urfave/cli/v3 v3.0.0-beta1
 	gopkg.in/resty.v1 v1.12.0
-	resty.dev/v3 v3.0.0-beta.2
 )
 
 require (
@@ -72,7 +70,6 @@ require (
 	golang.org/x/arch v0.8.0 // indirect
 	golang.org/x/crypto v0.36.0 // indirect
 	golang.org/x/net v0.37.0 // indirect
-	golang.org/x/sync v0.12.0 // indirect
 	golang.org/x/sys v0.31.0 // indirect
 	golang.org/x/text v0.23.0 // indirect
 	golang.org/x/tools v0.31.0 // indirect

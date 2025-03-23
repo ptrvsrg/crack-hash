@@ -8,7 +8,7 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/mongo"
 
 	"github.com/ptrvsrg/crack-hash/commonlib/bus/amqp"
 	"github.com/ptrvsrg/crack-hash/commonlib/bus/amqp/consumer"
@@ -22,10 +22,11 @@ import (
 	"github.com/ptrvsrg/crack-hash/manager/internal/persistence/repository/mongo/hashcracktask"
 	"github.com/ptrvsrg/crack-hash/manager/internal/service/domain"
 	"github.com/ptrvsrg/crack-hash/manager/internal/service/domain/hashcrack"
+	"github.com/ptrvsrg/crack-hash/manager/internal/service/domain/health"
 	"github.com/ptrvsrg/crack-hash/manager/internal/service/infrastructure"
 	"github.com/ptrvsrg/crack-hash/manager/internal/service/infrastructure/tasksplit/factory"
 	hashcrackhdlr "github.com/ptrvsrg/crack-hash/manager/internal/transport/http/handler/hashcrack"
-	"github.com/ptrvsrg/crack-hash/manager/internal/transport/http/handler/health"
+	healthhdlr "github.com/ptrvsrg/crack-hash/manager/internal/transport/http/handler/health"
 	"github.com/ptrvsrg/crack-hash/manager/internal/transport/http/handler/swagger"
 	"github.com/ptrvsrg/crack-hash/manager/pkg/message"
 )
@@ -157,7 +158,7 @@ func (c *Container) setupRepositories(_ context.Context) {
 
 	c.Repos = repository.Repositories{
 		HashCrackTask: hashcracktask.NewRepo(
-			c.Providers.MongoDB, c.Config.MongoDB,
+			c.Logger, c.Providers.MongoDB, c.Config.MongoDB,
 		),
 	}
 }
@@ -179,16 +180,17 @@ func (c *Container) setupPublishers(_ context.Context) {
 func (c *Container) setupServices(_ context.Context) {
 	c.Logger.Info().Msg("setup services")
 
-	splitSvc, err := factory.NewService(c.Config.Task.Split)
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to create task split strategy")
-	}
-
 	c.InfraSVCs = infrastructure.Services{
-		TaskSplit: splitSvc,
+		TaskSplit: factory.NewService(c.Logger, c.Config.Task.Split),
 	}
 	c.DomainSVCs = domain.Services{
+		Health: health.NewService(
+			c.Logger,
+			c.Providers.MongoDB,
+			c.Providers.AMQPConn,
+		),
 		HashCrackTask: hashcrack.NewService(
+			c.Logger,
 			c.Config.Task,
 			c.Repos.HashCrackTask,
 			c.InfraSVCs.TaskSplit,
@@ -201,9 +203,9 @@ func (c *Container) setupHandlers(_ context.Context) {
 	c.Logger.Info().Msg("setup handlers")
 
 	c.Handlers = []handler.Handler{
-		health.NewHandler(),
-		swagger.NewHandler(),
-		hashcrackhdlr.NewHandler(c.DomainSVCs.HashCrackTask),
+		healthhdlr.NewHandler(c.Logger, c.DomainSVCs.Health),
+		swagger.NewHandler(c.Logger),
+		hashcrackhdlr.NewHandler(c.Logger, c.DomainSVCs.HashCrackTask),
 	}
 }
 

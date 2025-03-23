@@ -20,4 +20,4 @@ task:
   split:
     strategy: chunk-based
     chunk-size: 10000000
-  progressPeriod: 1s
+  progressPeriod: 2s

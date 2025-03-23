@@ -5,11 +5,10 @@ package mock
 import (
 	context "context"
 
-	bson "go.mongodb.org/mongo-driver/v2/bson"
-
 	entity "github.com/ptrvsrg/crack-hash/manager/internal/persistence/entity"
-
 	mock "github.com/stretchr/testify/mock"
+
+	primitive "go.mongodb.org/mongo-driver/bson/primitive"
 
 	time "time"
 )
@@ -179,7 +178,7 @@ func (_c *HashCrackTaskMock_DeleteAllExpired_Call) RunAndReturn(run func(context
 }
 
 // Get provides a mock function with given fields: ctx, id
-func (_m *HashCrackTaskMock) Get(ctx context.Context, id bson.ObjectID) (*entity.HashCrackTask, error) {
+func (_m *HashCrackTaskMock) Get(ctx context.Context, id primitive.ObjectID) (*entity.HashCrackTask, error) {
 	ret := _m.Called(ctx, id)
 
 	if len(ret) == 0 {
@@ -188,10 +187,10 @@ func (_m *HashCrackTaskMock) Get(ctx context.Context, id bson.ObjectID) (*entity
 
 	var r0 *entity.HashCrackTask
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, bson.ObjectID) (*entity.HashCrackTask, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, primitive.ObjectID) (*entity.HashCrackTask, error)); ok {
 		return rf(ctx, id)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, bson.ObjectID) *entity.HashCrackTask); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, primitive.ObjectID) *entity.HashCrackTask); ok {
 		r0 = rf(ctx, id)
 	} else {
 		if ret.Get(0) != nil {
@@ -199,7 +198,7 @@ func (_m *HashCrackTaskMock) Get(ctx context.Context, id bson.ObjectID) (*entity
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, bson.ObjectID) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, primitive.ObjectID) error); ok {
 		r1 = rf(ctx, id)
 	} else {
 		r1 = ret.Error(1)
@@ -215,14 +214,14 @@ type HashCrackTaskMock_Get_Call struct {
 
 // Get is a helper method to define mock.On call
 //   - ctx context.Context
-//   - id bson.ObjectID
+//   - id primitive.ObjectID
 func (_e *HashCrackTaskMock_Expecter) Get(ctx interface{}, id interface{}) *HashCrackTaskMock_Get_Call {
 	return &HashCrackTaskMock_Get_Call{Call: _e.mock.On("Get", ctx, id)}
 }
 
-func (_c *HashCrackTaskMock_Get_Call) Run(run func(ctx context.Context, id bson.ObjectID)) *HashCrackTaskMock_Get_Call {
+func (_c *HashCrackTaskMock_Get_Call) Run(run func(ctx context.Context, id primitive.ObjectID)) *HashCrackTaskMock_Get_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(bson.ObjectID))
+		run(args[0].(context.Context), args[1].(primitive.ObjectID))
 	})
 	return _c
 }
@@ -232,7 +231,7 @@ func (_c *HashCrackTaskMock_Get_Call) Return(_a0 *entity.HashCrackTask, _a1 erro
 	return _c
 }
 
-func (_c *HashCrackTaskMock_Get_Call) RunAndReturn(run func(context.Context, bson.ObjectID) (*entity.HashCrackTask, error)) *HashCrackTaskMock_Get_Call {
+func (_c *HashCrackTaskMock_Get_Call) RunAndReturn(run func(context.Context, primitive.ObjectID) (*entity.HashCrackTask, error)) *HashCrackTaskMock_Get_Call {
 	_c.Call.Return(run)
 	return _c
 }

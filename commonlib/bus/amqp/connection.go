@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"atomicgo.dev/robin"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
@@ -15,18 +16,12 @@ import (
 	"github.com/streadway/amqp"
 )
 
+const (
+	timeout = time.Second
+)
+
 var (
 	ErrUrlsIsEmpty = errors.New("urls is empty")
-
-	BackoffPolicy = []time.Duration{
-		1 * time.Second,
-		2 * time.Second,
-		5 * time.Second,
-		10 * time.Second,
-		15 * time.Second,
-		20 * time.Second,
-		25 * time.Second,
-	}
 )
 
 type (
@@ -48,26 +43,40 @@ type (
 	Connection struct {
 		*amqp.Connection
 
+		opts     amqp.Config
+		balancer *robin.Loadbalancer[string]
 		logger   zerolog.Logger
 		prefetch int
 
-		reconnect atomic.Bool
-		closed    atomic.Bool
-		rw        sync.RWMutex
-		cancel    context.CancelFunc
-		wg        sync.WaitGroup
+		// Reconnect
+		reconnectLock sync.RWMutex
+		reconnect     atomic.Bool
+
+		// Watcher lifecycle
+		wg     sync.WaitGroup
+		cancel context.CancelFunc
+
+		// State
+		closed atomic.Bool
 	}
 
 	// Channel amqp.Channel wapper
 	Channel struct {
 		*amqp.Channel
 
+		conn   *Connection
 		logger zerolog.Logger
 
-		closed atomic.Bool
-		rw     sync.RWMutex
-		cancel context.CancelFunc
+		// Reconnect
+		reconnectLock sync.RWMutex
+		reconnect     atomic.Bool
+
+		// Watcher lifecycle
 		wg     sync.WaitGroup
+		cancel context.CancelFunc
+
+		// State
+		closed atomic.Bool
 	}
 )
 
@@ -83,7 +92,9 @@ func Dial(ctx context.Context, cfg Config) (*Connection, error) {
 		},
 	}
 
-	origConn, err := amqp.DialConfig(cfg.URI, opts)
+	balancer := robin.NewLoadbalancer([]string{cfg.URI})
+
+	origConn, err := amqp.DialConfig(balancer.Next(), opts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to dial amqp: %w", err)
 	}
@@ -94,67 +105,24 @@ func Dial(ctx context.Context, cfg Config) (*Connection, error) {
 	conn := &Connection{
 		Connection: origConn,
 
+		opts:     opts,
+		balancer: balancer,
 		logger: log.With().
 			Str("component", "amqp-connection").
 			Str("mode", "standalone").
 			Logger(),
 		prefetch: cfg.Prefetch,
 
-		rw:        sync.RWMutex{},
-		cancel:    cancel,
-		wg:        sync.WaitGroup{},
-		reconnect: atomic.Bool{},
-		closed:    atomic.Bool{},
+		reconnectLock: sync.RWMutex{},
+		reconnect:     atomic.Bool{},
+
+		wg:     sync.WaitGroup{},
+		cancel: cancel,
+
+		closed: atomic.Bool{},
 	}
 
-	// Start watcher
-	go func() {
-		conn.logger.Info().Msg("connection watcher started")
-
-		conn.wg.Add(1)
-		defer conn.wg.Done()
-
-		for {
-			select {
-			case <-ctx.Done():
-				conn.logger.Info().Msg("connection watcher stopped")
-				return
-
-			default:
-				// check if connection is closed
-				reason, ok := <-conn.getConnection().NotifyClose(make(chan *amqp.Error))
-				if !ok {
-					time.Sleep(time.Second)
-					continue
-				}
-
-				conn.logger.Error().Err(reason).Msg("connection closed")
-
-				// set flag
-				conn.reconnect.Store(true)
-
-				// reconnect if not closed by developer
-				for _, timeout := range BackoffPolicy {
-					conn.logger.Debug().Dur("timeout", timeout).Msg("try reconnect")
-
-					origConn, err := amqp.DialConfig(cfg.URI, opts)
-					if err != nil {
-						conn.logger.Error().Err(err).Msg("failed to reconnect")
-						time.Sleep(timeout)
-						continue
-					}
-
-					// set new amqp.Connection and reset flag
-					conn.setConnection(origConn)
-					conn.reconnect.Store(false)
-
-					conn.logger.Info().Msg("reconnect success")
-
-					break
-				}
-			}
-		}
-	}()
+	go conn.runWatcher(ctx)
 
 	return conn, nil
 }
@@ -164,6 +132,8 @@ func DialCluster(ctx context.Context, cfg ClusterConfig) (*Connection, error) {
 	if len(cfg.URIs) == 0 {
 		return nil, ErrUrlsIsEmpty
 	}
+
+	balancer := robin.NewLoadbalancer(cfg.URIs)
 
 	logger := log.With().
 		Str("component", "amqp-connection").
@@ -180,22 +150,25 @@ func DialCluster(ctx context.Context, cfg ClusterConfig) (*Connection, error) {
 		},
 	}
 
-	nodeSequence := 0
-
 	var (
 		origConn *amqp.Connection
 		err      error
+		joinErr  error
 	)
 	for i := 0; i < len(cfg.URIs); i++ {
-		logger.Debug().Str("node", cfg.URIs[nodeSequence]).Msg("dial amqp")
+		uri := balancer.Next()
+		logger.Debug().Str("node", uri).Msg("dial amqp")
 
-		origConn, err = amqp.DialConfig(cfg.URIs[nodeSequence], opts)
-		if err != nil {
-			nodeSequence = next(cfg.URIs, nodeSequence)
+		origConn, err = amqp.DialConfig(uri, opts)
+		if err == nil {
+			break
 		}
+
+		logger.Error().Err(err).Str("node", uri).Msg("failed to dial amqp")
+		joinErr = errors.Join(joinErr, err)
 	}
 	if err != nil {
-		return nil, fmt.Errorf("failed to dial amqp: %w", err)
+		return nil, fmt.Errorf("failed to dial amqp: %w", joinErr)
 	}
 
 	// Create context for watcher
@@ -204,86 +177,89 @@ func DialCluster(ctx context.Context, cfg ClusterConfig) (*Connection, error) {
 	conn := &Connection{
 		Connection: origConn,
 
+		opts:     opts,
+		balancer: balancer,
 		logger:   logger,
 		prefetch: cfg.Prefetch,
 
-		rw:        sync.RWMutex{},
-		cancel:    cancel,
-		closed:    atomic.Bool{},
-		reconnect: atomic.Bool{},
+		reconnectLock: sync.RWMutex{},
+		reconnect:     atomic.Bool{},
+
+		wg:     sync.WaitGroup{},
+		cancel: cancel,
+
+		closed: atomic.Bool{},
 	}
 
-	// Start watcher
-	go func() {
-		conn.logger.Info().Msg("connection watcher started")
-
-		conn.wg.Add(1)
-		defer conn.wg.Done()
-
-		errCh := conn.getConnection().NotifyClose(make(chan *amqp.Error))
-
-		for {
-			select {
-			case <-ctx.Done():
-				conn.logger.Info().Msg("connection watcher stopped")
-				return
-
-			case reason, ok := <-errCh:
-				if !ok {
-					errCh = conn.getConnection().NotifyClose(make(chan *amqp.Error))
-					time.Sleep(time.Second)
-					continue
-				}
-
-				conn.logger.Error().Err(reason).Msg("connection closed")
-
-				// set flag
-				conn.reconnect.Store(true)
-
-				// reconnect if not closed by developer
-				for _, timeout := range BackoffPolicy {
-					conn.logger.Debug().Dur("timeout", timeout).Msg("try reconnect")
-
-					// try next node
-					nodeSequence = next(cfg.URIs, nodeSequence)
-					logger.Debug().Str("node", cfg.URIs[nodeSequence]).Msg("dial amqp")
-
-					origConn, err := amqp.DialConfig(cfg.URIs[nodeSequence], opts)
-					if err != nil {
-						conn.logger.Error().Err(err).Msg("failed to reconnect")
-						time.Sleep(timeout)
-						continue
-					}
-
-					// set new amqp.Connection and reset flag
-					conn.setConnection(origConn)
-					conn.reconnect.Store(false)
-
-					conn.logger.Info().Msg("reconnect success")
-
-					break
-				}
-			}
-		}
-	}()
+	go conn.runWatcher(ctx)
 
 	return conn, nil
 }
 
-// getConnection get amqp.Connection
-func (c *Connection) getConnection() *amqp.Connection {
-	c.rw.RLock()
-	defer c.rw.RUnlock()
+// runWatcher watch connection state for reconnection
+func (c *Connection) runWatcher(ctx context.Context) {
+	c.logger.Info().Msg("connection watcher started")
 
-	return c.Connection
+	c.wg.Add(1)
+	defer c.wg.Done()
+
+	for {
+		select {
+		case <-ctx.Done():
+			c.logger.Info().Msg("connection watcher stopped")
+			return
+
+		case reason, ok := <-c.getConnection().NotifyClose(make(chan *amqp.Error)):
+			if !ok {
+				c.logger.Info().Msg("connection watcher stopped")
+				return
+			}
+
+			// lock connection for reconnect
+			c.reconnectLock.Lock()
+			c.reconnect.Store(true)
+
+			c.logger.Error().Err(reason).Msg("connection closed, try to reconnect")
+
+			// reconnect
+			for {
+				c.logger.Debug().Dur("timeout", timeout).Msg("try reconnect")
+				time.Sleep(timeout)
+
+				// check closed
+				if c.IsClosed() {
+					break
+				}
+
+				// try next node
+				uri := c.balancer.Next()
+				c.logger.Debug().Str("node", uri).Msg("dial amqp")
+
+				origConn, err := amqp.DialConfig(uri, c.opts)
+				if err != nil {
+					c.logger.Error().Err(err).Str("node", uri).Msg("failed to reconnect")
+					continue
+				}
+
+				// set new amqp.Connection
+				c.Connection = origConn
+				break
+			}
+
+			// unlock connection for reconnect
+			c.reconnect.Store(false)
+			c.reconnectLock.Unlock()
+			c.logger.Info().Msg("connection reconnected")
+		}
+	}
 }
 
-// setConnection set amqp.Connection
-func (c *Connection) setConnection(conn *amqp.Connection) {
-	c.rw.Lock()
-	defer c.rw.Unlock()
+// getConnection get amqp.Connection
+func (c *Connection) getConnection() *amqp.Connection {
+	c.reconnectLock.RLock()
+	defer c.reconnectLock.RUnlock()
 
-	c.Connection = conn
+	return c.Connection
 }
 
 // Channel wrap amqp.Connection.Channel, get a auto reconnect channel
@@ -291,11 +267,12 @@ func (c *Connection) Channel(ctx context.Context) (*Channel, error) {
 	// Open a channel
 	origCh, err := c.getConnection().Channel()
 	if err != nil {
-		return nil, fmt.Errorf("failed to open a ch: %w", err)
+		return nil, fmt.Errorf("failed to open a channel: %w", err)
 	}
 
 	// set prefetch
 	if err := origCh.Qos(c.prefetch, 0, false); err != nil {
+		_ = origCh.Close()
 		return nil, fmt.Errorf("failed to set prefetch: %w", err)
 	}
 
@@ -305,76 +282,26 @@ func (c *Connection) Channel(ctx context.Context) (*Channel, error) {
 	ch := &Channel{
 		Channel: origCh,
 
+		conn:   c,
 		logger: log.With().Str("component", "amqp-channel").Logger(),
 
-		rw:     sync.RWMutex{},
-		cancel: cancel,
+		reconnectLock: sync.RWMutex{},
+		reconnect:     atomic.Bool{},
+
 		wg:     sync.WaitGroup{},
+		cancel: cancel,
+
 		closed: atomic.Bool{},
 	}
 
-	// Start watcher
-	go func() {
-		ch.logger.Info().Msg("channel watcher started")
-
-		ch.wg.Add(1)
-		defer ch.wg.Done()
-
-		errCh := ch.getChannel().NotifyClose(make(chan *amqp.Error))
-
-		for {
-			select {
-			case <-ctx.Done():
-				ch.logger.Info().Msg("channel watcher stopped")
-				return
-
-			case reason, ok := <-errCh:
-				if !ok {
-					errCh = ch.getChannel().NotifyClose(make(chan *amqp.Error))
-					time.Sleep(time.Second)
-					continue
-				}
-
-				ch.logger.Error().Err(reason).Msg("channel closed")
-
-				// wait for reconnect connection
-				for c.reconnect.Load() {
-					ch.logger.Debug().Msg("wait for reconnect connection")
-					time.Sleep(time.Second)
-				}
-
-				// reconnect if not closed by developer
-				for _, timeout := range BackoffPolicy {
-					ch.logger.Debug().Dur("timeout", timeout).Msg("try reconnect")
-
-					// open a new channel
-					origCh, err := c.getConnection().Channel()
-					if err != nil {
-						ch.logger.Error().Err(err).Msg("failed to reconnect")
-						time.Sleep(timeout)
-						continue
-					}
-
-					// set prefetch
-					if err := origCh.Qos(c.prefetch, 0, false); err != nil {
-						ch.logger.Error().Err(err).Msg("failed to set prefetch")
-						time.Sleep(timeout)
-						continue
-					}
-
-					// set new amqp.Channel
-					ch.setChannel(origCh)
-
-					ch.logger.Info().Msg("reconnect success")
-
-					break
-				}
-			}
-		}
-
-	}()
+	go ch.runWatcher(ctx)
 
 	return ch, nil
+}
+
+// IsReconnect indicate reconnect
+func (c *Connection) IsReconnect() bool {
+	return c.reconnect.Load()
 }
 
 // IsClosed indicate closed by developer
@@ -399,32 +326,73 @@ func (c *Connection) Close() error {
 	return nil
 }
 
-// Next element index of slice
-func next(s []string, lastSeq int) int {
-	length := len(s)
-	if length == 0 || lastSeq == length-1 {
-		return 0
-	} else if lastSeq < length-1 {
-		return lastSeq + 1
-	} else {
-		return -1
+// runWatcher run channel watcher
+func (ch *Channel) runWatcher(ctx context.Context) {
+	ch.logger.Info().Msg("channel watcher started")
+
+	ch.wg.Add(1)
+	defer ch.wg.Done()
+
+	for {
+		select {
+		case <-ctx.Done():
+			ch.logger.Info().Msg("channel watcher stopped")
+			return
+
+		case reason := <-ch.getChannel().NotifyClose(make(chan *amqp.Error)):
+			// lock channel for reconnect
+			ch.reconnectLock.Lock()
+			ch.reconnect.Store(true)
+			ch.logger.Error().Err(reason).Msg("channel closed, try to reconnect")
+
+			// reconnect if not closed by developer
+			for {
+				ch.logger.Debug().Dur("timeout", timeout).Msg("try reconnect")
+				time.Sleep(timeout)
+
+				// check closed
+				if ch.IsClosed() {
+					break
+				}
+
+				// open a new channel
+				origCh, err := ch.conn.getConnection().Channel()
+				if err != nil {
+					ch.logger.Error().Err(err).Msg("failed to reconnect")
+					continue
+				}
+
+				// set prefetch
+				if err := origCh.Qos(ch.conn.prefetch, 0, false); err != nil {
+					_ = origCh.Close()
+					ch.logger.Error().Err(err).Msg("failed to set prefetch")
+					continue
+				}
+
+				// set new amqp.Channel
+				ch.Channel = origCh
+				break
+			}
+
+			// unlock channel for reconnect
+			ch.reconnect.Store(false)
+			ch.reconnectLock.Unlock()
+			ch.logger.Info().Msg("channel reconnected")
+		}
 	}
 }
 
 // getChannel get amqp.Channel
 func (ch *Channel) getChannel() *amqp.Channel {
-	ch.rw.RLock()
-	defer ch.rw.RUnlock()
+	ch.reconnectLock.RLock()
+	defer ch.reconnectLock.RUnlock()
 
 	return ch.Channel
 }
 
-// setChannel set amqp.Channel
-func (ch *Channel) setChannel(conn *amqp.Channel) {
-	ch.rw.Lock()
-	defer ch.rw.Unlock()
-
-	ch.Channel = conn
+// IsReconnect indicate reconnect
+func (ch *Channel) IsReconnect() bool {
+	return ch.reconnect.Load()
 }
 
 // IsClosed indicate closed by developer
@@ -452,30 +420,34 @@ func (ch *Channel) Close() error {
 // Consume wrap amqp.Channel.Consume, the returned delivery will end only when channel closed by developer
 func (ch *Channel) Consume(
 	queue, consumer string, autoAck, exclusive, noLocal, noWait bool, args amqp.Table,
-) (<-chan amqp.Delivery, error) {
+) <-chan amqp.Delivery {
 	deliveries := make(chan amqp.Delivery)
+	go ch.runConsumer(deliveries, queue, consumer, autoAck, exclusive, noLocal, noWait, args)
+	return deliveries
+}
 
-	go func() {
-		for {
-			d, err := ch.getChannel().Consume(queue, consumer, autoAck, exclusive, noLocal, noWait, args)
-			if err != nil {
-				ch.logger.Error().Err(err).Msg("failed to consume")
-				time.Sleep(time.Second)
-				continue
-			}
-
-			for msg := range d {
-				deliveries <- msg
-			}
-
-			// sleep before IsClose call. closed flag may not set before sleep.
-			time.Sleep(time.Second)
-
-			if ch.IsClosed() {
-				break
-			}
+// runConsumer run channel consumer
+func (ch *Channel) runConsumer(
+	deliveries chan<- amqp.Delivery, queue, consumer string, autoAck, exclusive, noLocal, noWait bool, args amqp.Table,
+) {
+	for {
+		d, err := ch.getChannel().Consume(queue, consumer, autoAck, exclusive, noLocal, noWait, args)
+		if err != nil {
+			ch.logger.Error().Err(err).Msg("failed to consume")
+			time.Sleep(timeout)
+			continue
 		}
-	}()
 
-	return deliveries, nil
+		for msg := range d {
+			deliveries <- msg
+		}
+
+		// sleep before IsClose call. closed flag may not set before sleep.
+		time.Sleep(timeout)
+
+		if ch.IsClosed() {
+			close(deliveries)
+			break
+		}
+	}
 }

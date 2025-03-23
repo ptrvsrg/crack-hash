@@ -8,11 +8,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/rs/zerolog/log"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"github.com/ptrvsrg/crack-hash/commonlib/bus/amqp/publisher"
 	pubmock "github.com/ptrvsrg/crack-hash/commonlib/bus/amqp/publisher/mock"
@@ -56,7 +57,7 @@ func TestMain(m *testing.M) {
 		MaxAge:      time.Hour * 24,
 		FinishDelay: time.Minute,
 	}
-	service = hashcrack.NewService(cfg, mockRepo, mockSplitSvc, mockPublisher)
+	service = hashcrack.NewService(log.Logger, cfg, mockRepo, mockSplitSvc, mockPublisher)
 
 	m.Run()
 }
@@ -72,7 +73,7 @@ func Test_CreateTask(t *testing.T) {
 
 			sameTasks := []*entity.HashCrackTask{
 				{
-					ObjectID:  bson.NewObjectID(),
+					ObjectID:  primitive.NewObjectID(),
 					Hash:      input.Hash,
 					MaxLength: input.MaxLength,
 				},
@@ -179,7 +180,7 @@ func Test_GetTaskStatus(t *testing.T) {
 	t.Run(
 		"Success", func(t *testing.T) {
 			// Arrange
-			objID := bson.NewObjectID()
+			objID := primitive.NewObjectID()
 			taskID := objID.Hex()
 			task := &entity.HashCrackTask{
 				ObjectID: objID,
@@ -188,7 +189,7 @@ func Test_GetTaskStatus(t *testing.T) {
 
 			mockRepo.On("Get", mock.Anything, mock.Anything).Run(
 				func(args mock.Arguments) {
-					objectID, ok := args.Get(1).(bson.ObjectID)
+					objectID, ok := args.Get(1).(primitive.ObjectID)
 					assert.True(t, ok)
 					assert.Equal(t, taskID, objectID.Hex())
 				},
@@ -206,12 +207,12 @@ func Test_GetTaskStatus(t *testing.T) {
 	t.Run(
 		"Task not found", func(t *testing.T) {
 			// Arrange
-			objID := bson.NewObjectID()
+			objID := primitive.NewObjectID()
 			taskID := objID.Hex()
 
 			mockRepo.On("Get", mock.Anything, mock.Anything).Run(
 				func(args mock.Arguments) {
-					objectID, ok := args.Get(1).(bson.ObjectID)
+					objectID, ok := args.Get(1).(primitive.ObjectID)
 					assert.True(t, ok)
 					assert.Equal(t, taskID, objectID.Hex())
 				},
@@ -267,7 +268,7 @@ func Test_SaveResultTask(t *testing.T) {
 				t.Run(
 					c.Name, func(t *testing.T) {
 						// Arrange
-						objID := bson.NewObjectID()
+						objID := primitive.NewObjectID()
 						input := &message.HashCrackTaskResult{
 							RequestID:  objID.Hex(),
 							PartNumber: 1,
@@ -324,7 +325,7 @@ func Test_SaveResultTask(t *testing.T) {
 
 						mockRepo.On("Get", mock.Anything, mock.Anything).Run(
 							func(args mock.Arguments) {
-								objectID, ok := args.Get(1).(bson.ObjectID)
+								objectID, ok := args.Get(1).(primitive.ObjectID)
 								assert.True(t, ok)
 								assert.Equal(t, objID.Hex(), objectID.Hex())
 							},
@@ -362,7 +363,7 @@ func Test_SaveResultTask(t *testing.T) {
 	t.Run(
 		"Success - Not finish task", func(t *testing.T) {
 			// Arrange
-			objID := bson.NewObjectID()
+			objID := primitive.NewObjectID()
 			input := &message.HashCrackTaskResult{
 				RequestID:  objID.Hex(),
 				PartNumber: 0,
@@ -381,7 +382,7 @@ func Test_SaveResultTask(t *testing.T) {
 
 			mockRepo.On("Get", mock.Anything, mock.Anything).Run(
 				func(args mock.Arguments) {
-					objectID, ok := args.Get(1).(bson.ObjectID)
+					objectID, ok := args.Get(1).(primitive.ObjectID)
 					assert.True(t, ok)
 					assert.Equal(t, objID.Hex(), objectID.Hex())
 				},
@@ -405,7 +406,7 @@ func Test_SaveResultTask(t *testing.T) {
 	t.Run(
 		"Task not found", func(t *testing.T) {
 			// Arrange
-			objID := bson.NewObjectID()
+			objID := primitive.NewObjectID()
 			input := &message.HashCrackTaskResult{
 				RequestID: objID.Hex(),
 				Answer: &message.Answer{
@@ -417,7 +418,7 @@ func Test_SaveResultTask(t *testing.T) {
 
 			mockRepo.On("Get", mock.Anything, mock.Anything).Run(
 				func(args mock.Arguments) {
-					objectID, ok := args.Get(1).(bson.ObjectID)
+					objectID, ok := args.Get(1).(primitive.ObjectID)
 					assert.True(t, ok)
 					assert.Equal(t, objID.Hex(), objectID.Hex())
 				},
@@ -435,7 +436,7 @@ func Test_SaveResultTask(t *testing.T) {
 	t.Run(
 		"Update error", func(t *testing.T) {
 			// Arrange
-			objID := bson.NewObjectID()
+			objID := primitive.NewObjectID()
 			input := &message.HashCrackTaskResult{
 				RequestID:  objID.Hex(),
 				PartNumber: 0,
@@ -456,7 +457,7 @@ func Test_SaveResultTask(t *testing.T) {
 
 			mockRepo.On("Get", mock.Anything, mock.Anything).Run(
 				func(args mock.Arguments) {
-					objectID, ok := args.Get(1).(bson.ObjectID)
+					objectID, ok := args.Get(1).(primitive.ObjectID)
 					assert.True(t, ok)
 					assert.Equal(t, objID.Hex(), objectID.Hex())
 				},
@@ -479,7 +480,7 @@ func TestFinishTasks(t *testing.T) {
 			// Arrange
 			tasks := []*entity.HashCrackTask{
 				{
-					ObjectID: bson.NewObjectID(),
+					ObjectID: primitive.NewObjectID(),
 					Status:   "PENDING",
 				},
 			}
@@ -528,7 +529,7 @@ func TestFinishTasks(t *testing.T) {
 			// Arrange
 			tasks := []*entity.HashCrackTask{
 				{
-					ObjectID: bson.NewObjectID(),
+					ObjectID: primitive.NewObjectID(),
 					Status:   "PENDING",
 				},
 			}

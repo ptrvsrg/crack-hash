@@ -33,11 +33,10 @@ services:
     hostname: rabbitmq1
     restart: unless-stopped
     environment:
-      RABBITMQ_CONFIG_FILE: /etc/rabbitmq/rabbitmq.conf
       RABBITMQ_ERLANG_COOKIE: secret
       NODENAME: rabbitmq@rabbitmq1
     healthcheck:
-      test: [ "CMD-SHELL", "rabbitmq-diagnostics -q status && rabbitmq-diagnostics -q check_local_alarms" ]
+      test: [ "CMD-SHELL", "rabbitmq-diagnostics -q check_port_connectivity && rabbitmq-diagnostics -q cluster_status && rabbitmq-diagnostics -q check_local_alarms" ]
     volumes:
       - rabbitmq1-data:/var/lib/rabbitmq
       - rabbitmq1-logs:/var/log/rabbitmq
@@ -59,11 +58,10 @@ services:
     hostname: rabbitmq2
     restart: unless-stopped
     environment:
-      RABBITMQ_CONFIG_FILE: /etc/rabbitmq/rabbitmq.conf
       RABBITMQ_ERLANG_COOKIE: secret
       NODENAME: rabbitmq@rabbitmq2
     healthcheck:
-      test: [ "CMD-SHELL", "rabbitmq-diagnostics -q status && rabbitmq-diagnostics -q check_local_alarms" ]
+      test: [ "CMD-SHELL", "rabbitmq-diagnostics -q check_port_connectivity && rabbitmq-diagnostics -q cluster_status && rabbitmq-diagnostics -q check_local_alarms" ]
     volumes:
       - rabbitmq2-data:/var/lib/rabbitmq
       - rabbitmq2-logs:/var/log/rabbitmq
@@ -85,11 +83,10 @@ services:
     hostname: rabbitmq3
     restart: unless-stopped
     environment:
-      RABBITMQ_CONFIG_FILE: /etc/rabbitmq/rabbitmq.conf
       RABBITMQ_ERLANG_COOKIE: secret
       NODENAME: rabbitmq@rabbitmq3
     healthcheck:
-      test: [ "CMD-SHELL", "rabbitmq-diagnostics -q status && rabbitmq-diagnostics -q check_local_alarms" ]
+      test: [ "CMD-SHELL", "rabbitmq-diagnostics -q check_port_connectivity && rabbitmq-diagnostics -q cluster_status && rabbitmq-diagnostics -q check_local_alarms" ]
     volumes:
       - rabbitmq3-data:/var/lib/rabbitmq
       - rabbitmq3-logs:/var/log/rabbitmq

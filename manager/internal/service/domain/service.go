@@ -22,6 +22,11 @@ type HashCrackTask interface {
 	DeleteExpiredTasks(ctx context.Context) error
 }
 
+type Health interface {
+	Health(ctx context.Context) error
+}
+
 type Services struct {
 	HashCrackTask HashCrackTask
+	Health        Health
 }

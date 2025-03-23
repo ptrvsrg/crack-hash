@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"go.mongodb.org/mongo-driver/v2/mongo"
-	"go.mongodb.org/mongo-driver/v2/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type Config struct {
@@ -39,7 +39,7 @@ func NewClient(ctx context.Context, cfg Config) (*mongo.Client, error) {
 		SetLoggerOptions(logOpts).
 		SetBSONOptions(bsonOpts)
 
-	client, err := mongo.Connect(opts)
+	client, err := mongo.Connect(ctx, opts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to MongoDB: %w", err)
 	}

@@ -12,15 +12,15 @@ import (
 
 func RegisterFinishTimeoutTasksJob(c *di.Container) cron.RegisterFunc {
 	return func(ctx context.Context, scheduler *gocron.Scheduler) error {
+		logger := c.Logger.With().
+			Str("component", "cron-scheduler").
+			Str("job", "finish-timeout-task").
+			Logger()
+
 		_, err := scheduler.
 			Every(c.Config.Task.FinishDelay).
 			Do(
 				func(ctx context.Context) {
-					logger := c.Logger.With().
-						Str("component", "cron-scheduler").
-						Str("job", "finish-timeout-task").
-						Logger()
-
 					logger.Debug().Msg("running cron job")
 
 					if err := c.DomainSVCs.HashCrackTask.FinishTimeoutTasks(ctx); err != nil {

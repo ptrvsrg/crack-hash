@@ -7,12 +7,12 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
-	"go.mongodb.org/mongo-driver/v2/bson"
-	"go.mongodb.org/mongo-driver/v2/mongo"
-	"go.mongodb.org/mongo-driver/v2/mongo/options"
-	"go.mongodb.org/mongo-driver/v2/mongo/readconcern"
-	"go.mongodb.org/mongo-driver/v2/mongo/writeconcern"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo/readconcern"
+	"go.mongodb.org/mongo-driver/mongo/writeconcern"
 
 	"github.com/ptrvsrg/crack-hash/manager/config"
 	"github.com/ptrvsrg/crack-hash/manager/internal/persistence/entity"
@@ -25,7 +25,7 @@ type repo struct {
 	logger     zerolog.Logger
 }
 
-func NewRepo(client *mongo.Client, cfg config.MongoDBConfig) repository.HashCrackTask {
+func NewRepo(logger zerolog.Logger, client *mongo.Client, cfg config.MongoDBConfig) repository.HashCrackTask {
 	wc := &writeconcern.WriteConcern{
 		W:       cfg.WriteConcern.W,
 		Journal: cfg.WriteConcern.Journal,
@@ -46,7 +46,7 @@ func NewRepo(client *mongo.Client, cfg config.MongoDBConfig) repository.HashCrac
 	return &repo{
 		client:     client,
 		collection: collection,
-		logger: log.With().
+		logger: logger.With().
 			Str("repo", "hash-crack").
 			Str("type", "mongo").
 			Logger(),
@@ -138,7 +138,7 @@ func (r *repo) GetAllFinished(ctx context.Context) ([]*entity.HashCrackTask, err
 	return tasks, nil
 }
 
-func (r *repo) Get(ctx context.Context, id bson.ObjectID) (*entity.HashCrackTask, error) {
+func (r *repo) Get(ctx context.Context, id primitive.ObjectID) (*entity.HashCrackTask, error) {
 	r.logger.Debug().Str("id", id.Hex()).Msg("get crack task")
 
 	filter := bson.M{"_id": id}

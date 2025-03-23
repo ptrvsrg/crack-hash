@@ -2,11 +2,8 @@ package consumer
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"runtime/debug"
 	"sync"
-	"time"
 
 	"github.com/goccy/go-json"
 	"github.com/rs/zerolog"
@@ -31,7 +28,7 @@ type (
 	}
 
 	Consumer interface {
-		Subscribe(ctx context.Context) error
+		Subscribe(ctx context.Context)
 	}
 
 	consumer[T any] struct {
@@ -70,8 +67,8 @@ func New[T any](ch *commonamqp.Channel, handler Handler[T], cfg Config) Consumer
 	return c
 }
 
-func (c *consumer[T]) connect(_ context.Context) (<-chan amqp.Delivery, error) {
-	msgCh, err := c.ch.Consume(
+func (c *consumer[T]) connect(_ context.Context) <-chan amqp.Delivery {
+	return c.ch.Consume(
 		c.config.Queue,
 		c.config.Consumer,
 		c.config.AutoAck,
@@ -80,53 +77,27 @@ func (c *consumer[T]) connect(_ context.Context) (<-chan amqp.Delivery, error) {
 		c.config.NoWait,
 		c.config.Args,
 	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to consume queue: %w", err)
-	}
-
-	return msgCh, nil
 }
 
-func (c *consumer[T]) subscribe(ctx context.Context) error {
-	var (
-		msgCh <-chan amqp.Delivery
-		err   error
-	)
-
-	for {
-		if msgCh, err = c.connect(ctx); err != nil {
-			c.logger.Error().Err(err).Msg("failed to connect consumer to AMQP")
-			time.Sleep(10 * time.Second)
-			continue
-		}
-		break
-	}
-
+func (c *consumer[T]) Subscribe(ctx context.Context) {
+	msgCh := c.connect(ctx)
 	c.logger.Info().Msg("consumer connected")
 
 	for {
 		select {
 		case <-ctx.Done():
 			c.logger.Info().Msg("consumer stopped")
-			return nil
+			return
 
 		case d, ok := <-msgCh:
 			if !ok {
 				if c.ch.IsClosed() {
-					return nil
+					return
 				}
 
-				c.logger.Info().Msg("try to reconnect consumer")
-
-				c.wg.Add(1)
-				go func() {
-					defer c.wg.Done()
-					if err := c.subscribe(ctx); err != nil {
-						c.errChan <- err
-					}
-				}()
-
-				return nil
+				c.logger.Info().Msg("consumer closed, try to reconnect")
+				msgCh = c.connect(ctx)
+				continue
 			}
 
 			c.logger.Info().Bytes("body", d.Body).Msg("got new event")
@@ -137,6 +108,7 @@ func (c *consumer[T]) subscribe(ctx context.Context) error {
 				continue
 			}
 
+			// catch panic
 			func() {
 				defer func() {
 					if r := recover(); r != nil {
@@ -150,28 +122,4 @@ func (c *consumer[T]) subscribe(ctx context.Context) error {
 			}()
 		}
 	}
-}
-
-func (c *consumer[T]) Subscribe(ctx context.Context) error {
-	c.wg.Add(1)
-	go func() {
-		defer c.wg.Done()
-		if err := c.subscribe(ctx); err != nil {
-			c.errChan <- err
-		}
-	}()
-
-	// Wait for all goroutines to finish and propagate errors
-	go func() {
-		c.wg.Wait()
-		close(c.errChan)
-	}()
-
-	// Collect and return the first error, if any
-	errs := make([]error, 0)
-	for err := range c.errChan {
-		errs = append(errs, err)
-	}
-
-	return errors.Join(errs...)
 }

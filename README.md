@@ -11,13 +11,7 @@ Distributed system for cracking MD5 hashes
 
 ## Architecture
 
-### Users
-
-![architecture](.assets/arch-users.png)
-
-### Developers
-
-![architecture](.assets/arch-developers.png)
+![architecture](.assets/arch.png)
 
 ## Draw.io
 

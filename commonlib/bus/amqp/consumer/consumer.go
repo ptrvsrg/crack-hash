@@ -6,9 +6,9 @@ import (
 	"sync"
 
 	"github.com/goccy/go-json"
+	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"github.com/streadway/amqp"
 
 	commonamqp "github.com/ptrvsrg/crack-hash/commonlib/bus/amqp"
 )
@@ -67,8 +67,9 @@ func New[T any](ch *commonamqp.Channel, handler Handler[T], cfg Config) Consumer
 	return c
 }
 
-func (c *consumer[T]) connect(_ context.Context) <-chan amqp.Delivery {
+func (c *consumer[T]) connect(ctx context.Context) <-chan amqp.Delivery {
 	return c.ch.Consume(
+		ctx,
 		c.config.Queue,
 		c.config.Consumer,
 		c.config.AutoAck,

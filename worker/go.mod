@@ -7,9 +7,9 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/ptrvsrg/crack-hash/commonlib v0.0.0-local
 	github.com/ptrvsrg/crack-hash/manager v0.0.0-local
+	github.com/rabbitmq/amqp091-go v1.10.0
 	github.com/rs/zerolog v1.33.0
 	github.com/samber/lo v1.49.1
-	github.com/streadway/amqp v1.1.0
 	github.com/stretchr/testify v1.10.0
 	github.com/swaggo/swag v1.16.4
 	github.com/urfave/cli/v3 v3.0.0-beta1

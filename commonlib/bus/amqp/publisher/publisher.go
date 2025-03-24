@@ -7,9 +7,9 @@ import (
 	"sync"
 
 	"github.com/goccy/go-json"
+	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"github.com/streadway/amqp"
 
 	amqp2 "github.com/ptrvsrg/crack-hash/commonlib/bus/amqp"
 )
@@ -116,7 +116,8 @@ func (p *publisher[T]) sendMessage(ctx context.Context, mandatory, immediate boo
 		}
 	}
 
-	if err := p.ch.Publish(
+	if err := p.ch.PublishWithContext(
+		ctx,
 		p.config.Exchange,
 		p.config.RoutingKey,
 		mandatory,

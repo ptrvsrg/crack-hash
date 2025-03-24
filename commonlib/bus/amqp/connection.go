@@ -13,7 +13,7 @@ import (
 
 	"sync/atomic"
 
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 const (
@@ -419,19 +419,20 @@ func (ch *Channel) Close() error {
 
 // Consume wrap amqp.Channel.Consume, the returned delivery will end only when channel closed by developer
 func (ch *Channel) Consume(
-	queue, consumer string, autoAck, exclusive, noLocal, noWait bool, args amqp.Table,
+	ctx context.Context, queue, consumer string, autoAck, exclusive, noLocal, noWait bool, args amqp.Table,
 ) <-chan amqp.Delivery {
 	deliveries := make(chan amqp.Delivery)
-	go ch.runConsumer(deliveries, queue, consumer, autoAck, exclusive, noLocal, noWait, args)
+	go ch.runConsumer(ctx, deliveries, queue, consumer, autoAck, exclusive, noLocal, noWait, args)
 	return deliveries
 }
 
 // runConsumer run channel consumer
 func (ch *Channel) runConsumer(
-	deliveries chan<- amqp.Delivery, queue, consumer string, autoAck, exclusive, noLocal, noWait bool, args amqp.Table,
+	ctx context.Context, deliveries chan<- amqp.Delivery, queue, consumer string, autoAck, exclusive, noLocal,
+	noWait bool, args amqp.Table,
 ) {
 	for {
-		d, err := ch.getChannel().Consume(queue, consumer, autoAck, exclusive, noLocal, noWait, args)
+		d, err := ch.getChannel().ConsumeWithContext(ctx, queue, consumer, autoAck, exclusive, noLocal, noWait, args)
 		if err != nil {
 			ch.logger.Error().Err(err).Msg("failed to consume")
 			time.Sleep(timeout)

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	amqp1 "github.com/streadway/amqp"
+	amqp1 "github.com/rabbitmq/amqp091-go"
 
 	"github.com/ptrvsrg/crack-hash/commonlib/bus/amqp"
 	"github.com/ptrvsrg/crack-hash/commonlib/bus/amqp/consumer"

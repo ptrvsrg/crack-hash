@@ -2,6 +2,7 @@ package hashcracktask
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -38,17 +39,6 @@ func NewService(
 }
 
 func (s *svc) ExecuteTask(ctx context.Context, input *message.HashCrackTaskStarted) error {
-	s.logger.Info().
-		Str("id", input.RequestID).
-		Int("part", input.PartNumber).
-		Msg("start brute force md5")
-
-	go s.executeTask(ctx, input)
-
-	return nil
-}
-
-func (s *svc) executeTask(ctx context.Context, input *message.HashCrackTaskStarted) {
 	// Brute force
 	s.logger.Info().
 		Str("id", input.RequestID).
@@ -66,7 +56,7 @@ func (s *svc) executeTask(ctx context.Context, input *message.HashCrackTaskStart
 			s.logger.Error().Err(err).Stack().Msg("failed to send result message")
 		}
 
-		return
+		return fmt.Errorf("failed to brute force md5: %w", err)
 	}
 
 	for progress := range progressCh {
@@ -80,7 +70,7 @@ func (s *svc) executeTask(ctx context.Context, input *message.HashCrackTaskStart
 
 		if err := s.publisher.SendMessage(ctx, msg, publisher.Persistent, false, false); err != nil {
 			s.logger.Error().Err(err).Stack().Msg("failed to send result message")
-			return
+			return fmt.Errorf("failed to send result message: %w", err)
 		}
 	}
 
@@ -88,6 +78,8 @@ func (s *svc) executeTask(ctx context.Context, input *message.HashCrackTaskStart
 		Str("id", input.RequestID).
 		Int("part", input.PartNumber).
 		Msg("end brute force md5")
+
+	return nil
 }
 
 func buildErrorResultMessage(requestID string, partNumber int, error *string) *message.HashCrackTaskResult {

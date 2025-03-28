@@ -98,6 +98,7 @@ func Test_ExecuteTask(t *testing.T) {
 						}
 						progressCh := make(chan infrastructure.TaskProgress, 1)
 						progressCh <- tc.progress
+						close(progressCh)
 
 						mockBruteForce.On(
 							"BruteForceMD5", input.Hash, input.Alphabet.Symbols, input.MaxLength, input.PartNumber,
@@ -129,7 +130,6 @@ func Test_ExecuteTask(t *testing.T) {
 
 						// Act
 						err := svc.ExecuteTask(context.Background(), input)
-						time.Sleep(time.Second)
 
 						// Assert
 						require.NoError(t, err)
@@ -175,10 +175,10 @@ func Test_ExecuteTask(t *testing.T) {
 
 			// Act
 			err := svc.ExecuteTask(context.Background(), input)
-			time.Sleep(time.Second)
 
 			// Assert
-			require.NoError(t, err)
+			require.Error(t, err)
+			require.ErrorIs(t, err, expectedError)
 			mockBruteForce.AssertExpectations(t)
 		},
 	)

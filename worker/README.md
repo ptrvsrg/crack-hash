@@ -39,13 +39,23 @@ YAML file (for example [`config/config.default.yaml`](./config/config.default.ya
 server:
   port: 8080
   env: dev
-manager:
-  address:
+amqp:
+  uris:
+  username:
+  password:
+  prefetch: 10
+  consumers:
+    taskstarted:
+      queue:
+  publishers:
+    taskresult:
+      exchange:
+      routingkey:
 task:
   split:
     strategy: chunk-based
     chunk-size: 10000000
-  concurrency: 1000
+  progressPeriod: 5s
 ```
 
 ENV variables (for example [`config/.env.default`](./config/.env.default)):
@@ -56,11 +66,19 @@ CONFIG_FILE=config/config.yaml
 SERVER_PORT=8080
 SERVER_ENV=dev
 
-MANAGER_ADDRESS=
+AMQP_URIS=
+AMQP_USERNAME=
+AMQP_PASSWORD=
+AMQP_PREFETCH=10
+
+AMQP_CONSUMERS_TASKSTARTED_QUEUE=
+
+AMQP_PUBLISHERS_TASKRESULT_EXCHANGE=
+AMQP_PUBLISHERS_TASKRESULT_ROUTINGKEY=
 
 TASK_SPLIT_STRATEGY=chunk-based
 TASK_SPLIT_CHUNK_SIZE=10000000
-TASK_CONCURRENCY=1000
+TASK_PROGRESSPERIOD=5s
 ```
 
 ## Makefile
@@ -68,7 +86,7 @@ TASK_CONCURRENCY=1000
 ```bash
 Available commands:
   build                 - Build the application
-  build-image   - Build the docker image
+  build-image           - Build the docker image
   run                   - Run the application (set the COMMAND environment variable to change the command, default is 'server')
   swagger               - Generate Swagger specification
   mock                  - Generate mocks

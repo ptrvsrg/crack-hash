@@ -17,7 +17,6 @@ var (
 
 type HashCrackTask interface {
 	GetAllByHashAndMaxLength(ctx context.Context, hash string, maxLength int) ([]*entity.HashCrackTask, error)
-	CountByStatus(ctx context.Context, status entity.HashCrackTaskStatus) (int, error)
 	GetAllFinished(ctx context.Context) ([]*entity.HashCrackTask, error)
 	Get(ctx context.Context, id primitive.ObjectID) (*entity.HashCrackTask, error)
 	Create(ctx context.Context, task *entity.HashCrackTask) error

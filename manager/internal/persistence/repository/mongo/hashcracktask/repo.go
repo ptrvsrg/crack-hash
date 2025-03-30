@@ -93,21 +93,6 @@ func (r *repo) GetAllByHashAndMaxLength(ctx context.Context, hash string, maxLen
 	return tasks, nil
 }
 
-func (r *repo) CountByStatus(ctx context.Context, status entity.HashCrackTaskStatus) (int, error) {
-	r.logger.Debug().
-		Str("status", status.String()).
-		Msg("count crack tasks by status")
-
-	filter := bson.M{"status": status}
-
-	count, err := r.collection.CountDocuments(ctx, filter)
-	if err != nil {
-		return 0, fmt.Errorf("failed to count documents: %w", err)
-	}
-
-	return int(count), nil
-}
-
 func (r *repo) GetAllFinished(ctx context.Context) ([]*entity.HashCrackTask, error) {
 	r.logger.Debug().Msg("get all finished crack tasks")
 

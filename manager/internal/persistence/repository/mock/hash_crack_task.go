@@ -26,63 +26,6 @@ func (_m *HashCrackTaskMock) EXPECT() *HashCrackTaskMock_Expecter {
 	return &HashCrackTaskMock_Expecter{mock: &_m.Mock}
 }
 
-// CountByStatus provides a mock function with given fields: ctx, status
-func (_m *HashCrackTaskMock) CountByStatus(ctx context.Context, status entity.HashCrackTaskStatus) (int, error) {
-	ret := _m.Called(ctx, status)
-
-	if len(ret) == 0 {
-		panic("no return value specified for CountByStatus")
-	}
-
-	var r0 int
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, entity.HashCrackTaskStatus) (int, error)); ok {
-		return rf(ctx, status)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, entity.HashCrackTaskStatus) int); ok {
-		r0 = rf(ctx, status)
-	} else {
-		r0 = ret.Get(0).(int)
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, entity.HashCrackTaskStatus) error); ok {
-		r1 = rf(ctx, status)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// HashCrackTaskMock_CountByStatus_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CountByStatus'
-type HashCrackTaskMock_CountByStatus_Call struct {
-	*mock.Call
-}
-
-// CountByStatus is a helper method to define mock.On call
-//   - ctx context.Context
-//   - status entity.HashCrackTaskStatus
-func (_e *HashCrackTaskMock_Expecter) CountByStatus(ctx interface{}, status interface{}) *HashCrackTaskMock_CountByStatus_Call {
-	return &HashCrackTaskMock_CountByStatus_Call{Call: _e.mock.On("CountByStatus", ctx, status)}
-}
-
-func (_c *HashCrackTaskMock_CountByStatus_Call) Run(run func(ctx context.Context, status entity.HashCrackTaskStatus)) *HashCrackTaskMock_CountByStatus_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(entity.HashCrackTaskStatus))
-	})
-	return _c
-}
-
-func (_c *HashCrackTaskMock_CountByStatus_Call) Return(_a0 int, _a1 error) *HashCrackTaskMock_CountByStatus_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *HashCrackTaskMock_CountByStatus_Call) RunAndReturn(run func(context.Context, entity.HashCrackTaskStatus) (int, error)) *HashCrackTaskMock_CountByStatus_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // Create provides a mock function with given fields: ctx, task
 func (_m *HashCrackTaskMock) Create(ctx context.Context, task *entity.HashCrackTask) error {
 	ret := _m.Called(ctx, task)

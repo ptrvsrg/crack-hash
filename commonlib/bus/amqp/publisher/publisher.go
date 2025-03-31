@@ -77,10 +77,10 @@ func (p *publisher[T]) SendMessage(
 		return fmt.Errorf("failed to marshal message: %w", err)
 	}
 
-	ampqMsg := p.buildMessage(body, mode)
+	amqpMsg := p.buildMessage(body, mode)
 
 	for i := 0; i < 3; i++ {
-		sendErr := p.sendMessage(ctx, mandatory, immediate, ampqMsg)
+		sendErr := p.sendMessage(ctx, mandatory, immediate, amqpMsg)
 		if sendErr == nil {
 			break
 		}

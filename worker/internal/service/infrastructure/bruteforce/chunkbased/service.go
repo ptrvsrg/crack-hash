@@ -5,9 +5,9 @@ import (
 	"encoding/hex"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 
 	"github.com/ptrvsrg/crack-hash/worker/internal/combin"
 	"github.com/ptrvsrg/crack-hash/worker/internal/service/infrastructure"
@@ -18,9 +18,9 @@ type svc struct {
 	chunkSize int
 }
 
-func NewService(chunkSize int) infrastructure.HashBruteForce {
+func NewService(logger zerolog.Logger, chunkSize int) infrastructure.HashBruteForce {
 	return &svc{
-		logger: log.With().
+		logger: logger.With().
 			Str("type", "infrastructure").
 			Str("service", "brute-force").
 			Str("strategy", "chunk-based").Logger(),
@@ -28,7 +28,10 @@ func NewService(chunkSize int) infrastructure.HashBruteForce {
 	}
 }
 
-func (s *svc) BruteForceMD5(hash string, alphabet []string, maxLength, partNumber int) ([]string, error) {
+func (s *svc) BruteForceMD5(
+	hash string, alphabet []string, maxLength, partNumber int, progressPeriod time.Duration,
+) (<-chan infrastructure.TaskProgress, error) {
+
 	s.logger.Info().
 		Str("hash", hash).
 		Int("maxLength", maxLength).
@@ -37,6 +40,7 @@ func (s *svc) BruteForceMD5(hash string, alphabet []string, maxLength, partNumbe
 		Int("chunkSize", s.chunkSize).
 		Msg("brute force md5")
 
+	// Create alphabet iterator
 	gen, err := combin.NewAlphabetIterator(
 		strings.Join(alphabet, ""),
 		maxLength,
@@ -46,25 +50,55 @@ func (s *svc) BruteForceMD5(hash string, alphabet []string, maxLength, partNumbe
 		return nil, fmt.Errorf("failed to create alphabet iterator: %w", err)
 	}
 
-	results := make([]string, 0, 1024)
-	for i := 0; i < s.chunkSize && gen.Next(); i++ {
-		word := gen.Current()
-		md5Hash := md5.Sum([]byte(word)) // nolint
-		sum := hex.EncodeToString(md5Hash[:])
-
-		if sum == hash {
-			results = append(results, word)
-		}
-
-		if (i+1)%100_000 == 0 {
-			percent := 100 * float64(i+1) / float64(s.chunkSize)
-			s.logger.Debug().
-				Str("hash", hash).
-				Int("maxLength", maxLength).
-				Int("part", partNumber).
-				Msgf("processed by %.2f%%", percent)
-		}
+	// Initialize progress
+	progress := infrastructure.TaskProgress{
+		Answers: make([]string, 0, 1024),
+		Percent: 0.0,
+		Status:  infrastructure.TaskStatusInProgress,
 	}
+	progressCh := make(chan infrastructure.TaskProgress, 1)
 
-	return results, nil
+	go func() {
+		// Create ticker
+		ticker := time.NewTicker(progressPeriod)
+		defer ticker.Stop()
+		defer close(progressCh)
+
+		for i := 0; i < s.chunkSize && gen.Next(); i++ {
+			select {
+			case <-ticker.C:
+				progress.Percent = 100 * float64(i+1) / float64(s.chunkSize)
+				s.logger.Debug().
+					Str("hash", hash).
+					Int("maxLength", maxLength).
+					Int("part", partNumber).
+					Msgf("processed by %.2f%%", progress.Percent)
+
+				progressCh <- progress
+
+			default:
+				word := gen.Current()
+				md5Hash := md5.Sum([]byte(word)) // nolint
+				sum := hex.EncodeToString(md5Hash[:])
+
+				if sum == hash {
+					progress.Answers = append(progress.Answers, word)
+				}
+
+			}
+		}
+
+		progress.Percent = 100.0
+		progress.Status = infrastructure.TaskStatusSuccess
+
+		s.logger.Debug().
+			Str("hash", hash).
+			Int("maxLength", maxLength).
+			Int("part", partNumber).
+			Msgf("processed by %.2f%%", progress.Percent)
+
+		progressCh <- progress
+	}()
+
+	return progressCh, nil
 }

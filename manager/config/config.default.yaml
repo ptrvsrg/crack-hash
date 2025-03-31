@@ -1,18 +1,34 @@
 server:
   port: 8080
   env: dev
-worker:
-  addresses:
-  health:
-    path:
-    interval: 1m
-    timeout: 1m
-    retries: 3
+mongodb:
+  uri:
+  username:
+  password:
+  db:
+  writeconcern:
+    w: majority
+    journal:
+  readconcern:
+    level: majority
+amqp:
+  uris:
+  username:
+  password:
+  prefetch: 20
+  consumers:
+    taskresult:
+      queue:
+  publishers:
+    taskstarted:
+      exchange:
+      routingkey:
 task:
+  alphabet: abcdefghijklmnopqrstuvwxyz0123456789
   split:
     strategy: chunk-based
-    chunkSize: 10000000
+    chunksize: 10000000
   timeout: 1h
   limit: 10
-  maxAge: 24h
-  finishDelay: 1m
+  maxage: 24h
+  finishdelay: 1m

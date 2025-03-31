@@ -15,38 +15,72 @@ const (
 
 type (
 	Config struct {
-		Server ServerConfig `yaml:"server"`
-		Worker WorkerConfig `yaml:"worker"`
-		Task   TaskConfig   `yaml:"task"`
+		Server  ServerConfig
+		MongoDB MongoDBConfig
+		AMQP    AMQPConfig
+		Task    TaskConfig
 	}
 
 	ServerConfig struct {
-		Env  Env `yaml:"env" env:"SERVER_ENV" env-default:"dev" validate:"oneof=dev prod"`
-		Port int `yaml:"port" env:"SERVER_PORT" env-default:"8080" validate:"required,min=-1,max=65535"`
+		Env  Env `default:"dev" validate:"required,oneof=dev prod"`
+		Port int `default:"8080" validate:"required,min=-1,max=65535"`
 	}
 
-	WorkerConfig struct {
-		Addresses []string           `yaml:"addresses" env:"WORKER_ADDRESSES" validate:"required,dive,http_url"`
-		Health    WorkerHealthConfig `yaml:"health"`
+	MongoDBConfig struct {
+		URI          string `validate:"required"`
+		Username     string `validate:"required"`
+		Password     string `validate:"required"`
+		DB           string `validate:"required"`
+		WriteConcern MongoDBWriteConcernConfig
+		ReadConcern  MongoDBReadConcernConfig
 	}
 
-	WorkerHealthConfig struct {
-		Path     string        `yaml:"path" env:"WORKER_HEALTH_PATH" validate:"required"`
-		Interval time.Duration `yaml:"interval" env:"WORKER_HEALTH_INTERVAL" env-default:"1m"`
-		Timeout  time.Duration `yaml:"timeout" env:"WORKER_HEALTH_TIMEOUT" env-default:"1m"`
-		Retries  int           `yaml:"retries" env:"WORKER_HEALTH_RETRIES" env-default:"3"`
+	MongoDBWriteConcernConfig struct {
+		W       interface{} `default:"majority" validate:"required"`
+		Journal *bool
+	}
+
+	MongoDBReadConcernConfig struct {
+		Level string `default:"majority" validate:"required,oneof=local majority available linearizable snapshot"`
+	}
+
+	AMQPConfig struct {
+		URIs       []string `validate:"required,min=1,dive,required"`
+		Username   string   `validate:"required"`
+		Password   string   `validate:"required"`
+		Prefetch   int      `default:"20" validate:"required,min=1"`
+		Consumers  AMQPConsumersConfig
+		Publishers AMQPPublishersConfig
+	}
+
+	AMQPConsumersConfig struct {
+		TaskResult AMQPConsumerConfig
+	}
+
+	AMQPConsumerConfig struct {
+		Queue string `validate:"required"`
+	}
+
+	AMQPPublishersConfig struct {
+		TaskStarted AMQPPublisherConfig
+	}
+
+	AMQPPublisherConfig struct {
+		Exchange   string `validate:"required"`
+		RoutingKey string `validate:"required"`
 	}
 
 	TaskConfig struct {
-		Split       TaskSplitConfig `yaml:"split"`
-		Timeout     time.Duration   `yaml:"timeout" env:"TASK_TIMEOUT" env-default:"1h"`
-		Limit       int             `yaml:"limit" env:"TASK_LIMIT" env-default:"10" validate:"min=1"`
-		MaxAge      time.Duration   `yaml:"maxAge" env:"TASK_MAX_AGE" env-default:"24h"`
-		FinishDelay time.Duration   `yaml:"finishDelay" env:"TASK_FINISH_DELAY" env-default:"1m"`
+		Split       TaskSplitConfig
+		Alphabet    string        `default:"abcdefghijklmnopqrstuvwxyz0123456789" validate:"required"`
+		Timeout     time.Duration `default:"1h" validate:"required"`
+		Limit       int           `default:"10" validate:"required,min=1"`
+		MaxAge      time.Duration `default:"24h" validate:"required"`
+		FinishDelay time.Duration `default:"1m" validate:"required"`
 	}
 
 	TaskSplitConfig struct {
-		Strategy  string `yaml:"strategy" env:"TASK_SPLIT_STRATEGY" env-default:"chunk-based" validate:"oneof=chunk-based"`
-		ChunkSize int    `yaml:"chunkSize" env:"TASK_SPLIT_CHUNK_SIZE" env-default:"10000000" validate:"min=1"`
+		Strategy  string `default:"chunk-based" validate:"required,oneof=chunk-based"`
+		ChunkSize int    `default:"10000000" validate:"required,min=1"`
 	}
 )

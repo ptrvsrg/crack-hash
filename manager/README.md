@@ -39,21 +39,37 @@ YAML file (for example [`config/config.default.yaml`](./config/config.default.ya
 server:
   port: 8080
   env: dev
-worker:
-  addresses:
-  health:
-    path:
-    interval: 1m
-    timeout: 1m
-    retries: 3
+mongodb:
+  uri:
+  username:
+  password:
+  db:
+  writeconcern:
+    w: majority
+    journal:
+  readconcern:
+    level: majority
+amqp:
+  uris:
+  username:
+  password:
+  prefetch: 20
+  consumers:
+    taskresult:
+      queue:
+  publishers:
+    taskstarted:
+      exchange:
+      routingkey:
 task:
+  alphabet: abcdefghijklmnopqrstuvwxyz0123456789
   split:
     strategy: chunk-based
-    chunkSize: 10000000
+    chunksize: 10000000
   timeout: 1h
   limit: 10
-  maxAge: 24h
-  finishDelay: 1m
+  maxage: 24h
+  finishdelay: 1m
 ```
 
 ENV variables (for example [`config/.env.default`](./config/.env.default)):
@@ -64,12 +80,25 @@ CONFIG_FILE=config/config.yaml
 SERVER_PORT=8080
 SERVER_ENV=dev
 
-WORKER_ADDRESSES=
-WORKER_HEALTH_PATH=
-WORKER_HEALTH_INTERVAL=1m
-WORKER_HEALTH_TIMEOUT=1m
-WORKER_HEALTH_RETRIES=3
+MONGODB_URI=
+MONGODB_USERNAME=
+MONGODB_PASSWORD=
+MONGODB_DB=
+MONGODB_WRITECONCERN_W=majority
+MONGODB_WRITECONCERN_JOURNAL=
+MONGODB_READCONCERN_LEVEL=majority
 
+AMQP_URIS=
+AMQP_USERNAME=
+AMQP_PASSWORD=
+AMQP_PREFETCH=20
+
+AMQP_CONSUMERS_TASKRESULT_QUEUE=
+
+AMQP_PUBLISHERS_TASKSTARTED_EXCHANGE=
+AMQP_PUBLISHERS_TASKSTARTED_ROUTINGKEY=
+
+TASK_ALPHABET=abcdefghijklmnopqrstuvwxyz0123456789
 TASK_SPLIT_STRATEGY=chunk-based
 TASK_SPLIT_CHUNK_SIZE=10000000
 TASK_TIMEOUT=1h

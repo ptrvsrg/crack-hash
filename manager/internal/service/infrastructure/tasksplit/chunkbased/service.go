@@ -6,7 +6,6 @@ import (
 	"math"
 
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 
 	"github.com/ptrvsrg/crack-hash/manager/internal/helper"
 	"github.com/ptrvsrg/crack-hash/manager/internal/service/infrastructure"
@@ -17,10 +16,10 @@ type svc struct {
 	logger    zerolog.Logger
 }
 
-func NewService(chunkSize int) infrastructure.TaskSplit {
+func NewService(logger zerolog.Logger, chunkSize int) infrastructure.TaskSplit {
 	return &svc{
 		chunkSize: chunkSize,
-		logger: log.With().
+		logger: logger.With().
 			Str("type", "infrastructure").
 			Str("infra-service", "task-split").
 			Logger(),

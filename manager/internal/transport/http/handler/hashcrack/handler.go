@@ -6,11 +6,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 
 	"github.com/ptrvsrg/crack-hash/commonlib/http/handler"
 	"github.com/ptrvsrg/crack-hash/commonlib/http/helper"
-	"github.com/ptrvsrg/crack-hash/manager/internal/persistence/repository"
 	"github.com/ptrvsrg/crack-hash/manager/internal/service/domain"
 	"github.com/ptrvsrg/crack-hash/manager/pkg/model"
 )
@@ -24,9 +22,9 @@ type hdlr struct {
 	svc    domain.HashCrackTask
 }
 
-func NewHandler(svc domain.HashCrackTask) handler.Handler {
+func NewHandler(logger zerolog.Logger, svc domain.HashCrackTask) handler.Handler {
 	return &hdlr{
-		logger: log.With().Str("handler", "hash-crack").Logger(),
+		logger: logger.With().Str("handler", "hash-crack").Logger(),
 		svc:    svc,
 	}
 }
@@ -38,11 +36,6 @@ func (h *hdlr) RegisterRoutes(r *gin.Engine) {
 	{
 		exAPI.POST("", h.handleCreateTask)
 		exAPI.GET("/status", h.handleGetTaskStatus)
-	}
-
-	inAPI := r.Group("/internal/api/manager/hash/crack")
-	{
-		inAPI.POST("/webhook", h.handleTaskResultWebhook)
 	}
 }
 
@@ -107,7 +100,9 @@ func (h *hdlr) handleGetTaskStatus(c *gin.Context) {
 	output, err := h.svc.GetTaskStatus(c, id)
 	if err != nil {
 		switch {
-		case errors.Is(err, repository.ErrCrackTaskNotFound):
+		case errors.Is(err, domain.ErrInvalidRequestID):
+			_ = helper.ErrorWithStatus(c, http.StatusBadRequest, err)
+		case errors.Is(err, domain.ErrTaskNotFound):
 			_ = helper.ErrorWithStatus(c, http.StatusNotFound, err)
 		default:
 			_ = helper.ErrorWithStatus(c, http.StatusInternalServerError, err)
@@ -117,34 +112,4 @@ func (h *hdlr) handleGetTaskStatus(c *gin.Context) {
 	}
 
 	c.JSON(200, output)
-}
-
-// handleTaskResultWebhook godoc
-//
-//	@Id				HashCrackTaskWebhook
-//	@Summary	    Get status of hash crack task
-//	@Description	Request for getting status of hash crack task
-//	@Tags			Hash Crack API
-//	@Accept			application/xml
-//	@Produce		application/xml
-//	@Param			input	body	model.HashCrackTaskWebhookInput	true	"Hash crack task webhook input"
-//	@Success		200
-//	@Failure		400 {object} model.ErrorOutput
-//	@Failure		500 {object} model.ErrorOutput
-//	@Router			/internal/api/manager/hash/crack/webhook [post]
-func (h *hdlr) handleTaskResultWebhook(ctx *gin.Context) {
-	h.logger.Debug().Msg("handle task webhook")
-
-	input := &model.HashCrackTaskWebhookInput{}
-	if err := ctx.ShouldBindXML(input); err != nil {
-		_ = helper.ErrorWithStatus(ctx, http.StatusBadRequest, err)
-		return
-	}
-
-	if err := h.svc.SaveResultSubtask(ctx, input); err != nil {
-		_ = helper.ErrorWithStatus(ctx, http.StatusInternalServerError, err)
-		return
-	}
-
-	ctx.Status(200)
 }

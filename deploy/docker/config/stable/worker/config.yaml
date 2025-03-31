@@ -1,0 +1,23 @@
+server:
+  port: 8080
+  env: dev
+amqp:
+  uris:
+    - amqp://rabbitmq1:5672
+    - amqp://rabbitmq2:5672
+    - amqp://rabbitmq3:5672
+  username: admin
+  password: password
+  prefetch: 10
+  consumers:
+    taskstarted:
+      queue: queue.task.started
+  publishers:
+    taskresult:
+      exchange: exchange.task.result
+      routingkey: managers
+task:
+  split:
+    strategy: chunk-based
+    chunk-size: 10000000
+  progressPeriod: 2s

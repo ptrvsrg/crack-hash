@@ -7,12 +7,14 @@ import (
 	syshttp "net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v3"
 
+	consumer2 "github.com/ptrvsrg/crack-hash/commonlib/bus/amqp/consumer"
 	commonconfig "github.com/ptrvsrg/crack-hash/commonlib/config"
 	"github.com/ptrvsrg/crack-hash/commonlib/http/server"
 	"github.com/ptrvsrg/crack-hash/commonlib/logging"
@@ -53,32 +55,16 @@ func runServer(ctx context.Context, _ *cli.Command) error {
 	logging.Setup(cfg.Server.Env == config.EnvDev)
 
 	// Setup DI
-	c := di.NewContainer(cfg)
-	defer func(c *di.Container) {
-		if err := c.Close(); err != nil {
-			log.Error().Err(err).Stack().Msg("failed to close container")
-		}
-	}(c)
+	c := di.NewContainer(ctx, cfg)
+	defer c.Close(ctx)
 
 	// Run server
-	srv := server.NewHTTP2(cfg.Server.Port, http.SetupRouter(c))
+	srv := startHTTPServer(ctx, cfg.Server, c)
+	defer stopHTTPServer(ctx, srv)
 
-	go func() {
-		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, syshttp.ErrServerClosed) {
-			log.Fatal().Err(err).Stack().Msg("failed to start server")
-		}
-	}()
-	defer func(ctx context.Context, srv *syshttp.Server) {
-		shutdownCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-		defer cancel()
-
-		log.Info().Msg("shutting down server")
-		if err := srv.Shutdown(shutdownCtx); err != nil {
-			log.Error().Err(err).Stack().Msg("failed to shutdown server")
-		}
-	}(ctx, srv)
-
-	log.Info().Msgf("server listens on port %d", cfg.Server.Port)
+	// Start consumers
+	wg, consumerCancel := startAMQPConsumer(ctx, c)
+	defer stopAMQPConsumer(ctx, wg, consumerCancel)
 
 	// Wait for signal
 	quit := make(chan os.Signal, 1)
@@ -86,4 +72,52 @@ func runServer(ctx context.Context, _ *cli.Command) error {
 	<-quit
 
 	return nil
+}
+
+func startHTTPServer(_ context.Context, cfg config.ServerConfig, c *di.Container) *syshttp.Server {
+	srv := server.NewHTTP2(cfg.Port, http.SetupRouter(c))
+
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, syshttp.ErrServerClosed) {
+			log.Fatal().Err(err).Stack().Msg("failed to start server")
+		}
+	}()
+
+	log.Info().Msgf("server listens on port %d", cfg.Port)
+
+	return srv
+}
+
+func stopHTTPServer(ctx context.Context, srv *syshttp.Server) {
+	log.Info().Msg("shutting down server")
+
+	shutdownCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Error().Err(err).Stack().Msg("failed to shutdown server")
+	}
+}
+
+func startAMQPConsumer(ctx context.Context, c *di.Container) (*sync.WaitGroup, context.CancelFunc) {
+	wg := &sync.WaitGroup{}
+	consumerCtx, consumerCancel := context.WithCancel(ctx)
+
+	for _, consumer := range c.Consumers {
+		wg.Add(1)
+		go func(consumer consumer2.Consumer, ctx context.Context) {
+			consumer.Subscribe(ctx)
+			wg.Done()
+		}(consumer, consumerCtx)
+	}
+
+	log.Info().Msg("AMQP consumers started")
+
+	return wg, consumerCancel
+}
+
+func stopAMQPConsumer(_ context.Context, wg *sync.WaitGroup, cancel context.CancelFunc) {
+	log.Info().Msg("stopping AMQP consumers")
+	cancel()
+	wg.Wait()
 }

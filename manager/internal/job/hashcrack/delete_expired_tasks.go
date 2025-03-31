@@ -12,15 +12,15 @@ import (
 
 func RegisterDeleteExpiredTaskJob(c *di.Container) cron.RegisterFunc {
 	return func(ctx context.Context, scheduler *gocron.Scheduler) error {
+		logger := c.Logger.With().
+			Str("component", "cron-scheduler").
+			Str("job", "delete-expired-task").
+			Logger()
+
 		_, err := scheduler.
 			Every(c.Config.Task.MaxAge/2).
 			Do(
 				func(ctx context.Context) {
-					logger := c.Logger.With().
-						Str("component", "cron-scheduler").
-						Str("job", "delete-expired-task").
-						Logger()
-
 					logger.Debug().Msg("running cron job")
 
 					if err := c.DomainSVCs.HashCrackTask.DeleteExpiredTasks(ctx); err != nil {

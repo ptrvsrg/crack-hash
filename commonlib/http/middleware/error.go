@@ -23,10 +23,8 @@ func ErrorMiddleware() gin.HandlerFunc {
 		c.Next()
 
 		// get the last error
-		logger.Debug().Msg("get the last error")
 		lastErr := c.Errors.Last()
 		if lastErr == nil {
-			logger.Debug().Msg("no error found")
 			return
 		}
 

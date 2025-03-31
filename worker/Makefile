@@ -72,7 +72,7 @@ watch:
  help:
 	@echo "Available commands:"
 	@echo "  build   		- Build the application"
-	@echo "  build-image 	- Build the docker image"
+	@echo "  build-image 		- Build the docker image"
 	@echo "  run     		- Run the application (set the COMMAND environment variable to change the command, default is 'server')"
 	@echo "  swagger 		- Generate Swagger specification"
 	@echo "  mock    		- Generate mocks"

@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/ptrvsrg/crack-hash/commonlib/logging"
@@ -24,7 +25,7 @@ func init() {
 }
 
 func TestMain(m *testing.M) {
-	svc = chunkbased.NewService(10_000_000)
+	svc = chunkbased.NewService(log.Logger, 10_000_000)
 
 	m.Run()
 }

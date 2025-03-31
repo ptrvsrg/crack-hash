@@ -29,7 +29,7 @@ func (l *logger) Error(err error, message string, keysAndValues ...interface{}) 
 
 func (l *logger) buildEventArgs(event *zerolog.Event, keysAndValues ...interface{}) *zerolog.Event {
 	if len(keysAndValues)%2 != 0 {
-		return event
+		keysAndValues = append(keysAndValues, nil)
 	}
 
 	for i := 0; i < len(keysAndValues); i += 2 {

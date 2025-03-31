@@ -2,6 +2,8 @@ module github.com/ptrvsrg/crack-hash/worker
 
 go 1.23.5
 
+toolchain go1.24.1
+
 require (
 	github.com/gin-gonic/gin v1.10.0
 	github.com/joho/godotenv v1.5.1
@@ -12,7 +14,7 @@ require (
 	github.com/samber/lo v1.49.1
 	github.com/stretchr/testify v1.10.0
 	github.com/swaggo/swag v1.16.4
-	github.com/urfave/cli/v3 v3.0.0-beta1
+	github.com/urfave/cli/v3 v3.1.0
 	gopkg.in/resty.v1 v1.12.0
 )
 

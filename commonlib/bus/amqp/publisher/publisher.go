@@ -8,7 +8,6 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"sync"
 	"time"
 
 	amqp2 "github.com/ptrvsrg/crack-hash/commonlib/bus/amqp"
@@ -39,8 +38,6 @@ type (
 		marshal     func(v any) ([]byte, error)
 		contentType string
 		logger      zerolog.Logger
-		isConnected bool
-		muConn      sync.Mutex
 	}
 )
 
@@ -67,19 +64,6 @@ func New[T any](ch *amqp2.Channel, config Config) Publisher[T] {
 	}
 
 	return pub
-}
-
-func (p *publisher[T]) connect(_ context.Context) error {
-	p.muConn.Lock()
-	defer p.muConn.Unlock()
-
-	if p.isConnected {
-		return nil
-	}
-
-	p.isConnected = true
-
-	return nil
 }
 
 func (p *publisher[T]) SendMessage(
@@ -115,13 +99,7 @@ func (p *publisher[T]) SendMessage(
 }
 
 func (p *publisher[T]) sendMessage(ctx context.Context, mandatory, immediate bool, ampqMsg *amqp.Publishing) error {
-	if !p.isConnected {
-		if err := p.connect(ctx); err != nil {
-			return fmt.Errorf("failed to connect: %w", err)
-		}
-	}
-
-	if err := p.ch.PublishWithContext(
+	if err := p.ch.Publish(
 		ctx,
 		p.config.Exchange,
 		p.config.RoutingKey,
@@ -129,10 +107,6 @@ func (p *publisher[T]) sendMessage(ctx context.Context, mandatory, immediate boo
 		immediate,
 		*ampqMsg,
 	); err != nil {
-		p.muConn.Lock()
-		p.isConnected = false
-		p.muConn.Unlock()
-
 		return fmt.Errorf("failed to publish a message: %w", err)
 	}
 

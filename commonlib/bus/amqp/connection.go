@@ -41,7 +41,7 @@ type (
 
 	// Connection amqp.Connection wrapper
 	Connection struct {
-		*amqp.Connection
+		conn *amqp.Connection
 
 		opts     amqp.Config
 		balancer *robin.Loadbalancer[string]
@@ -62,7 +62,7 @@ type (
 
 	// Channel amqp.Channel wapper
 	Channel struct {
-		*amqp.Channel
+		ch *amqp.Channel
 
 		conn   *Connection
 		logger zerolog.Logger
@@ -103,7 +103,7 @@ func Dial(ctx context.Context, cfg Config) (*Connection, error) {
 	ctx, cancel := context.WithCancel(ctx)
 
 	conn := &Connection{
-		Connection: origConn,
+		conn: origConn,
 
 		opts:     opts,
 		balancer: balancer,
@@ -175,7 +175,7 @@ func DialCluster(ctx context.Context, cfg ClusterConfig) (*Connection, error) {
 	ctx, cancel := context.WithCancel(ctx)
 
 	conn := &Connection{
-		Connection: origConn,
+		conn: origConn,
 
 		opts:     opts,
 		balancer: balancer,
@@ -209,7 +209,7 @@ func (c *Connection) runWatcher(ctx context.Context) {
 			c.logger.Info().Msg("connection watcher stopped")
 			return
 
-		case reason, ok := <-c.getConnection().NotifyClose(make(chan *amqp.Error)):
+		case reason, ok := <-c.GetConnection().NotifyClose(make(chan *amqp.Error)):
 			if !ok {
 				c.logger.Info().Msg("connection watcher stopped")
 				return
@@ -242,7 +242,7 @@ func (c *Connection) runWatcher(ctx context.Context) {
 				}
 
 				// set new amqp.Connection
-				c.Connection = origConn
+				c.conn = origConn
 				break
 			}
 
@@ -254,18 +254,18 @@ func (c *Connection) runWatcher(ctx context.Context) {
 	}
 }
 
-// getConnection get amqp.Connection
-func (c *Connection) getConnection() *amqp.Connection {
+// GetConnection get amqp.Connection
+func (c *Connection) GetConnection() *amqp.Connection {
 	c.reconnectLock.RLock()
 	defer c.reconnectLock.RUnlock()
 
-	return c.Connection
+	return c.conn
 }
 
 // Channel wrap amqp.Connection.Channel, get a auto reconnect channel
 func (c *Connection) Channel(ctx context.Context) (*Channel, error) {
 	// Open a channel
-	origCh, err := c.getConnection().Channel()
+	origCh, err := c.GetConnection().Channel()
 	if err != nil {
 		return nil, fmt.Errorf("failed to open a channel: %w", err)
 	}
@@ -280,7 +280,7 @@ func (c *Connection) Channel(ctx context.Context) (*Channel, error) {
 	ctx, cancel := context.WithCancel(ctx)
 
 	ch := &Channel{
-		Channel: origCh,
+		ch: origCh,
 
 		conn:   c,
 		logger: log.With().Str("component", "amqp-channel").Logger(),
@@ -319,7 +319,7 @@ func (c *Connection) Close() error {
 	c.cancel()
 	c.wg.Wait()
 
-	if err := c.getConnection().Close(); err != nil {
+	if err := c.GetConnection().Close(); err != nil {
 		return fmt.Errorf("failed to close amqp connection: %w", err)
 	}
 
@@ -339,7 +339,7 @@ func (ch *Channel) runWatcher(ctx context.Context) {
 			ch.logger.Info().Msg("channel watcher stopped")
 			return
 
-		case reason := <-ch.getChannel().NotifyClose(make(chan *amqp.Error)):
+		case reason := <-ch.GetChannel().NotifyClose(make(chan *amqp.Error)):
 			// lock channel for reconnect
 			ch.reconnectLock.Lock()
 			ch.reconnect.Store(true)
@@ -356,7 +356,7 @@ func (ch *Channel) runWatcher(ctx context.Context) {
 				}
 
 				// open a new channel
-				origCh, err := ch.conn.getConnection().Channel()
+				origCh, err := ch.conn.GetConnection().Channel()
 				if err != nil {
 					ch.logger.Error().Err(err).Msg("failed to reconnect")
 					continue
@@ -370,7 +370,7 @@ func (ch *Channel) runWatcher(ctx context.Context) {
 				}
 
 				// set new amqp.Channel
-				ch.Channel = origCh
+				ch.ch = origCh
 				break
 			}
 
@@ -382,12 +382,12 @@ func (ch *Channel) runWatcher(ctx context.Context) {
 	}
 }
 
-// getChannel get amqp.Channel
-func (ch *Channel) getChannel() *amqp.Channel {
+// GetChannel get amqp.Channel
+func (ch *Channel) GetChannel() *amqp.Channel {
 	ch.reconnectLock.RLock()
 	defer ch.reconnectLock.RUnlock()
 
-	return ch.Channel
+	return ch.ch
 }
 
 // IsReconnect indicate reconnect
@@ -410,8 +410,17 @@ func (ch *Channel) Close() error {
 	ch.cancel()
 	ch.wg.Wait()
 
-	if err := ch.getChannel().Close(); err != nil {
+	if err := ch.GetChannel().Close(); err != nil {
 		return fmt.Errorf("failed to close amqp channel: %w", err)
+	}
+
+	return nil
+}
+
+// Publish wrap amqp.Channel.Publish
+func (ch *Channel) Publish(ctx context.Context, exchange, key string, mandatory, immediate bool, msg amqp.Publishing) error {
+	if err := ch.GetChannel().PublishWithContext(ctx, exchange, key, mandatory, immediate, msg); err != nil {
+		return fmt.Errorf("failed to publish a message: %w", err)
 	}
 
 	return nil
@@ -432,7 +441,7 @@ func (ch *Channel) runConsumer(
 	noWait bool, args amqp.Table,
 ) {
 	for {
-		d, err := ch.getChannel().ConsumeWithContext(ctx, queue, consumer, autoAck, exclusive, noLocal, noWait, args)
+		d, err := ch.GetChannel().ConsumeWithContext(ctx, queue, consumer, autoAck, exclusive, noLocal, noWait, args)
 		if err != nil {
 			ch.logger.Error().Err(err).Msg("failed to consume")
 			time.Sleep(timeout)

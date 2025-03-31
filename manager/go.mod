@@ -2,6 +2,8 @@ module github.com/ptrvsrg/crack-hash/manager
 
 go 1.23.5
 
+toolchain go1.24.1
+
 require (
 	github.com/gin-gonic/gin v1.10.0
 	github.com/go-co-op/gocron v1.37.0
@@ -12,7 +14,7 @@ require (
 	github.com/samber/lo v1.49.1
 	github.com/stretchr/testify v1.10.0
 	github.com/swaggo/swag v1.16.4
-	github.com/urfave/cli/v3 v3.0.0-beta1
+	github.com/urfave/cli/v3 v3.1.0
 	go.mongodb.org/mongo-driver v1.17.3
 	golang.org/x/exp v0.0.0-20250305212735-054e65f0b394
 	gopkg.in/resty.v1 v1.12.0

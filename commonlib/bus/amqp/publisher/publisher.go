@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync"
-
 	"github.com/goccy/go-json"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"sync"
+	"time"
 
 	amqp2 "github.com/ptrvsrg/crack-hash/commonlib/bus/amqp"
 )
@@ -96,10 +96,15 @@ func (p *publisher[T]) SendMessage(
 	ampqMsg := p.buildMessage(body, mode)
 
 	for i := 0; i < 3; i++ {
-		if sendErr := p.sendMessage(ctx, mandatory, immediate, ampqMsg); sendErr != nil {
-			p.logger.Error().Err(sendErr).Stack().Msg("failed to publish a message")
-			err = errors.Join(err, sendErr)
+		sendErr := p.sendMessage(ctx, mandatory, immediate, ampqMsg)
+		if sendErr == nil {
+			break
 		}
+
+		p.logger.Error().Err(sendErr).Stack().Msg("failed to publish a message")
+		err = errors.Join(err, sendErr)
+
+		time.Sleep(1 * time.Second)
 	}
 
 	if err != nil {

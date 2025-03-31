@@ -2,13 +2,15 @@ module github.com/ptrvsrg/crack-hash/worker
 
 go 1.23.5
 
+toolchain go1.24.1
+
 require (
 	github.com/gin-gonic/gin v1.10.0
 	github.com/joho/godotenv v1.5.1
 	github.com/ptrvsrg/crack-hash/commonlib v0.0.0-local
 	github.com/ptrvsrg/crack-hash/manager v0.0.0-local
 	github.com/rabbitmq/amqp091-go v1.10.0
-	github.com/rs/zerolog v1.33.0
+	github.com/rs/zerolog v1.34.0
 	github.com/samber/lo v1.49.1
 	github.com/stretchr/testify v1.10.0
 	github.com/swaggo/swag v1.16.4

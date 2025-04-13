@@ -37,7 +37,8 @@ func NewClient(ctx context.Context, cfg Config) (*mongo.Client, error) {
 		ApplyURI(cfg.URI).
 		SetAuth(creds).
 		SetLoggerOptions(logOpts).
-		SetBSONOptions(bsonOpts)
+		SetBSONOptions(bsonOpts).
+		SetCompressors([]string{"snappy", "zlib", "zstd"})
 
 	client, err := mongo.Connect(ctx, opts)
 	if err != nil {

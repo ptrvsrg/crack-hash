@@ -111,6 +111,7 @@ func startCronScheduler(ctx context.Context, c *di.Container) *gocron.Scheduler 
 		ctx,
 		hashcrack.RegisterDeleteExpiredTaskJob(c),
 		hashcrack.RegisterFinishTimeoutTasksJob(c),
+		hashcrack.RegisterExecutePendingTasksJob(c),
 	)
 
 	scheduler.StartAsync()

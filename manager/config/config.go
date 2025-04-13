@@ -71,12 +71,13 @@ type (
 	}
 
 	TaskConfig struct {
-		Split       TaskSplitConfig
-		Alphabet    string        `default:"abcdefghijklmnopqrstuvwxyz0123456789" validate:"required"`
-		Timeout     time.Duration `default:"1h" validate:"required"`
-		Limit       int           `default:"10" validate:"required,min=1"`
-		MaxAge      time.Duration `default:"24h" validate:"required"`
-		FinishDelay time.Duration `default:"1m" validate:"required"`
+		Split        TaskSplitConfig
+		Alphabet     string        `default:"abcdefghijklmnopqrstuvwxyz0123456789" validate:"required"`
+		Timeout      time.Duration `default:"1h" validate:"required"`
+		Limit        int           `default:"10" validate:"required,min=1"`
+		MaxAge       time.Duration `default:"24h" validate:"required"`
+		RestartDelay time.Duration `default:"1m" validate:"required"`
+		FinishDelay  time.Duration `default:"1m" validate:"required"`
 	}
 
 	TaskSplitConfig struct {

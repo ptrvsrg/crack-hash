@@ -5,11 +5,11 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"errors"
+	"github.com/samber/lo"
 	"testing"
 	"time"
 
 	"github.com/rs/zerolog/log"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -34,18 +34,22 @@ func init() {
 }
 
 var (
-	mockRepo      *repomock.HashCrackTaskMock
-	mockSplitSvc  *infrasvcmock.TaskSplitMock
-	mockPublisher *pubmock.PublisherMock[message.HashCrackTaskStarted]
-	cfg           config.TaskConfig
-	service       domain.HashCrackTask
+	mockTaskRepo            *repomock.HashCrackTaskMock
+	mockSubtaskRepo         *repomock.HashCrackSubtaskMock
+	mockSplitSvc            *infrasvcmock.TaskSplitMock
+	mockTaskWithSubtasksSvc *infrasvcmock.TaskWithSubtasksMock
+	mockPublisher           *pubmock.PublisherMock[message.HashCrackTaskStarted]
+	cfg                     config.TaskConfig
+	service                 domain.HashCrackTask
 
 	ctx = context.Background()
 )
 
 func TestMain(m *testing.M) {
-	mockRepo = new(repomock.HashCrackTaskMock)
+	mockTaskRepo = new(repomock.HashCrackTaskMock)
+	mockSubtaskRepo = new(repomock.HashCrackSubtaskMock)
 	mockSplitSvc = new(infrasvcmock.TaskSplitMock)
+	mockTaskWithSubtasksSvc = new(infrasvcmock.TaskWithSubtasksMock)
 	mockPublisher = new(pubmock.PublisherMock[message.HashCrackTaskStarted])
 	cfg = config.TaskConfig{
 		Split: config.TaskSplitConfig{
@@ -57,71 +61,14 @@ func TestMain(m *testing.M) {
 		MaxAge:      time.Hour * 24,
 		FinishDelay: time.Minute,
 	}
-	service = hashcrack.NewService(log.Logger, cfg, mockRepo, mockSplitSvc, mockPublisher)
+	service = hashcrack.NewService(
+		log.Logger, cfg, mockTaskRepo, mockSubtaskRepo, mockSplitSvc, mockTaskWithSubtasksSvc, mockPublisher,
+	)
 
 	m.Run()
 }
 
 func Test_CreateTask(t *testing.T) {
-	t.Run(
-		"Success - already exists", func(t *testing.T) {
-			// Arrange
-			input := &model.HashCrackTaskInput{
-				MaxLength: 5,
-				Hash:      hex.EncodeToString(md5.New().Sum([]byte("hash"))),
-			}
-
-			sameTasks := []*entity.HashCrackTask{
-				{
-					ObjectID:  primitive.NewObjectID(),
-					Hash:      input.Hash,
-					MaxLength: input.MaxLength,
-				},
-			}
-
-			mockRepo.On("GetAllByHashAndMaxLength", ctx, input.Hash, input.MaxLength).Return(sameTasks, nil).Once()
-
-			// Act
-			output, err := service.CreateTask(ctx, input)
-
-			// Assert
-			require.NoError(t, err)
-			require.NotEmpty(t, output.RequestID)
-			require.Equal(t, sameTasks[0].ObjectID.Hex(), output.RequestID)
-		},
-	)
-
-	t.Run(
-		"Success - new task", func(t *testing.T) {
-			// Arrange
-			input := &model.HashCrackTaskInput{
-				MaxLength: 5,
-				Hash:      hex.EncodeToString(md5.New().Sum([]byte("hash"))),
-			}
-
-			mockRepo.On(
-				"GetAllByHashAndMaxLength", ctx, input.Hash,
-				input.MaxLength,
-			).Return([]*entity.HashCrackTask{}, nil).Once()
-			mockSplitSvc.On("Split", ctx, input.MaxLength, mock.Anything).Return(10, nil).Once()
-			mockRepo.On("Create", ctx, mock.Anything).Return(nil).Once()
-			mockPublisher.On(
-				"SendMessage", ctx, mock.Anything, publisher.Persistent, false,
-				false,
-			).Return(nil).Times(10)
-			mockRepo.On("Update", mock.Anything, mock.Anything).Return(nil).Once()
-
-			// Act
-			output, err := service.CreateTask(ctx, input)
-
-			time.Sleep(time.Second)
-
-			// Assert
-			require.NoError(t, err)
-			require.NotEmpty(t, output.RequestID)
-		},
-	)
-
 	t.Run(
 		"Split error", func(t *testing.T) {
 			// Arrange
@@ -131,11 +78,9 @@ func Test_CreateTask(t *testing.T) {
 			}
 			expectedErr := errors.New("split failed")
 
-			mockRepo.On(
-				"GetAllByHashAndMaxLength", ctx, input.Hash,
-				input.MaxLength,
-			).Return([]*entity.HashCrackTask{}, nil).Once()
-			mockRepo.On("CountByStatus", ctx, entity.HashCrackTaskStatusInProgress).Return(0, nil).Once()
+			mockTaskRepo.On(
+				"GetByHashAndMaxLength", ctx, input.Hash, input.MaxLength, false,
+			).Return(nil, repository.ErrCrackTaskNotFound).Once()
 			mockSplitSvc.On("Split", ctx, input.MaxLength, mock.Anything).Return(0, expectedErr).Once()
 
 			// Act
@@ -157,13 +102,11 @@ func Test_CreateTask(t *testing.T) {
 			}
 			expectedErr := errors.New("create failed")
 
-			mockRepo.On(
-				"GetAllByHashAndMaxLength", ctx, input.Hash,
-				input.MaxLength,
-			).Return([]*entity.HashCrackTask{}, nil).Once()
-			mockRepo.On("CountByStatus", ctx, entity.HashCrackTaskStatusInProgress).Return(0, nil).Once()
+			mockTaskRepo.On(
+				"GetByHashAndMaxLength", ctx, input.Hash, input.MaxLength, false,
+			).Return(nil, repository.ErrCrackTaskNotFound).Once()
 			mockSplitSvc.On("Split", ctx, input.MaxLength, mock.Anything).Return(10, nil).Once()
-			mockRepo.On("Create", mock.Anything, mock.Anything).Return(expectedErr).Once()
+			mockTaskWithSubtasksSvc.On("CreateTaskWithSubtasks", ctx, mock.Anything).Return(expectedErr).Once()
 
 			// Act
 			output, err := service.CreateTask(ctx, input)
@@ -174,6 +117,62 @@ func Test_CreateTask(t *testing.T) {
 			require.Nil(t, output)
 		},
 	)
+
+	t.Run(
+		"Success - already exists", func(t *testing.T) {
+			// Arrange
+			input := &model.HashCrackTaskInput{
+				MaxLength: 5,
+				Hash:      hex.EncodeToString(md5.New().Sum([]byte("hash"))),
+			}
+
+			sameTask := &entity.HashCrackTaskWithSubtasks{
+				ObjectID: primitive.NewObjectID(),
+			}
+
+			mockTaskRepo.On("GetByHashAndMaxLength", ctx, input.Hash, input.MaxLength, false).
+				Return(sameTask, nil).Once()
+
+			// Act
+			output, err := service.CreateTask(ctx, input)
+
+			// Assert
+			require.NoError(t, err)
+			require.NotEmpty(t, output.RequestID)
+			require.Equal(t, sameTask.ObjectID.Hex(), output.RequestID)
+		},
+	)
+
+	t.Run(
+		"Success - new task", func(t *testing.T) {
+			// Arrange
+			input := &model.HashCrackTaskInput{
+				MaxLength: 5,
+				Hash:      hex.EncodeToString(md5.New().Sum([]byte("hash"))),
+			}
+
+			mockTaskRepo.On(
+				"GetByHashAndMaxLength", ctx, input.Hash, input.MaxLength, false,
+			).Return(&entity.HashCrackTaskWithSubtasks{}, nil).Once()
+			mockSplitSvc.On("Split", ctx, input.MaxLength, mock.Anything).Return(10, nil).Once()
+			mockTaskWithSubtasksSvc.On("CreateTaskWithSubtasks", ctx, mock.Anything).Return(nil).Once()
+			mockPublisher.On(
+				"SendMessage", ctx, mock.Anything, publisher.Persistent, false,
+				false,
+			).Return(nil).Times(10)
+			mockSubtaskRepo.On("Update", mock.Anything, mock.Anything).Return(nil).Times(10)
+			mockTaskRepo.On("Update", mock.Anything, mock.Anything).Return(nil).Once()
+
+			// Act
+			output, err := service.CreateTask(ctx, input)
+
+			time.Sleep(time.Second)
+
+			// Assert
+			require.NoError(t, err)
+			require.NotEmpty(t, output.RequestID)
+		},
+	)
 }
 
 func Test_GetTaskStatus(t *testing.T) {
@@ -182,12 +181,19 @@ func Test_GetTaskStatus(t *testing.T) {
 			// Arrange
 			objID := primitive.NewObjectID()
 			taskID := objID.Hex()
-			task := &entity.HashCrackTask{
+			task := &entity.HashCrackTaskWithSubtasks{
 				ObjectID: objID,
-				Status:   "READY",
+				Status:   entity.HashCrackTaskStatusReady,
+				Subtasks: []*entity.HashCrackSubtask{
+					{
+						ObjectID: objID,
+						Status:   entity.HashCrackSubtaskStatusSuccess,
+						Data:     []string{"data"},
+					},
+				},
 			}
 
-			mockRepo.On("Get", mock.Anything, mock.Anything).Run(
+			mockTaskRepo.On("Get", ctx, mock.Anything, true).Run(
 				func(args mock.Arguments) {
 					objectID, ok := args.Get(1).(primitive.ObjectID)
 					assert.True(t, ok)
@@ -201,6 +207,11 @@ func Test_GetTaskStatus(t *testing.T) {
 			// Assert
 			require.NoError(t, err)
 			require.Equal(t, entity.HashCrackTaskStatusReady.String(), output.Status)
+			require.Len(t, output.Data, 1)
+			require.Equal(t, task.Subtasks[0].Data[0], output.Data[0])
+			require.Len(t, output.Subtasks, 1)
+			require.Equal(t, entity.HashCrackSubtaskStatusSuccess.String(), output.Subtasks[0].Status)
+			require.Equal(t, task.Subtasks[0].Data, output.Subtasks[0].Data)
 		},
 	)
 
@@ -210,7 +221,7 @@ func Test_GetTaskStatus(t *testing.T) {
 			objID := primitive.NewObjectID()
 			taskID := objID.Hex()
 
-			mockRepo.On("Get", mock.Anything, mock.Anything).Run(
+			mockTaskRepo.On("Get", ctx, mock.Anything, true).Run(
 				func(args mock.Arguments) {
 					objectID, ok := args.Get(1).(primitive.ObjectID)
 					assert.True(t, ok)
@@ -230,6 +241,66 @@ func Test_GetTaskStatus(t *testing.T) {
 }
 
 func Test_SaveResultTask(t *testing.T) {
+	t.Run(
+		"WithTransaction error", func(t *testing.T) {
+			// Arrange
+			objID := primitive.NewObjectID()
+			input := &message.HashCrackTaskResult{
+				RequestID: objID.Hex(),
+				Answer: &message.Answer{
+					Words:   []string{"word1", "word2"},
+					Percent: 100.0,
+				},
+				Status: entity.HashCrackSubtaskStatusSuccess.String(),
+			}
+
+			expectedError := errors.New("error")
+
+			mockTaskRepo.EXPECT().WithTransaction(ctx, mock.Anything).Return(nil, expectedError).Once()
+
+			// Act
+			err := service.SaveResultSubtask(ctx, input)
+
+			// Assert
+			require.Error(t, err)
+			require.ErrorIs(t, err, expectedError)
+		},
+	)
+
+	t.Run(
+		"Task not found", func(t *testing.T) {
+			// Arrange
+			objID := primitive.NewObjectID()
+			input := &message.HashCrackTaskResult{
+				RequestID: objID.Hex(),
+				Answer: &message.Answer{
+					Words:   []string{"word1", "word2"},
+					Percent: 100.0,
+				},
+				Status: entity.HashCrackSubtaskStatusSuccess.String(),
+			}
+
+			mockTaskRepo.EXPECT().WithTransaction(ctx, mock.Anything).RunAndReturn(
+				func(ctx context.Context, fn func(ctx context.Context) (any, error)) (any, error) {
+					return fn(ctx)
+				}).Once()
+			mockTaskRepo.On("Get", mock.Anything, mock.Anything, true).Run(
+				func(args mock.Arguments) {
+					objectID, ok := args.Get(1).(primitive.ObjectID)
+					assert.True(t, ok)
+					assert.Equal(t, objID.Hex(), objectID.Hex())
+				},
+			).Return(nil, repository.ErrCrackTaskNotFound).Once()
+
+			// Act
+			err := service.SaveResultSubtask(ctx, input)
+
+			// Assert
+			require.Error(t, err)
+			require.ErrorIs(t, err, domain.ErrTaskNotFound)
+		},
+	)
+
 	t.Run(
 		"Success - Finish task", func(t *testing.T) {
 			cases := []struct {
@@ -271,7 +342,7 @@ func Test_SaveResultTask(t *testing.T) {
 						objID := primitive.NewObjectID()
 						input := &message.HashCrackTaskResult{
 							RequestID:  objID.Hex(),
-							PartNumber: 1,
+							PartNumber: 0,
 							Status:     c.SubtaskStatus.String(),
 						}
 
@@ -293,7 +364,7 @@ func Test_SaveResultTask(t *testing.T) {
 						}
 
 						// Task
-						task := &entity.HashCrackTask{
+						task := &entity.HashCrackTaskWithSubtasks{
 							ObjectID:  objID,
 							PartCount: 2,
 						}
@@ -305,25 +376,37 @@ func Test_SaveResultTask(t *testing.T) {
 							c.SubtaskStatus == entity.HashCrackSubtaskStatusError &&
 								c.TaskStatus == entity.HashCrackTaskStatusPartialReady:
 
-							task.Subtasks = map[int]*entity.HashCrackSubtask{
-								0: {
+							task.Subtasks = []*entity.HashCrackSubtask{
+								{
 									PartNumber: 0,
 									Status:     entity.HashCrackSubtaskStatusSuccess,
+								},
+								{
+									PartNumber: 1,
+									Status:     entity.HashCrackSubtaskStatusInProgress,
 								},
 							}
 
 						default:
 
-							task.Subtasks = map[int]*entity.HashCrackSubtask{
-								0: {
+							task.Subtasks = []*entity.HashCrackSubtask{
+								{
 									PartNumber: 0,
 									Status:     entity.HashCrackSubtaskStatusError,
+								},
+								{
+									PartNumber: 1,
+									Status:     entity.HashCrackSubtaskStatusInProgress,
 								},
 							}
 
 						}
 
-						mockRepo.On("Get", mock.Anything, mock.Anything).Run(
+						mockTaskRepo.EXPECT().WithTransaction(ctx, mock.Anything).RunAndReturn(
+							func(ctx context.Context, fn func(ctx context.Context) (any, error)) (any, error) {
+								return fn(ctx)
+							}).Once()
+						mockTaskRepo.On("Get", mock.Anything, mock.Anything, true).Run(
 							func(args mock.Arguments) {
 								objectID, ok := args.Get(1).(primitive.ObjectID)
 								assert.True(t, ok)
@@ -331,7 +414,8 @@ func Test_SaveResultTask(t *testing.T) {
 							},
 						).Return(task, nil).Once()
 
-						call := mockRepo.On("Update", mock.Anything, mock.Anything).Run(
+						mockSubtaskRepo.On("Update", mock.Anything, mock.Anything).Return(nil).Once()
+						call := mockTaskRepo.On("Update", mock.Anything, mock.Anything).Run(
 							func(args mock.Arguments) {
 								task, ok := args.Get(1).(*entity.HashCrackTask)
 								assert.True(t, ok)
@@ -374,26 +458,34 @@ func Test_SaveResultTask(t *testing.T) {
 				Status: entity.HashCrackSubtaskStatusSuccess.String(),
 			}
 
-			task := &entity.HashCrackTask{
+			task := &entity.HashCrackTaskWithSubtasks{
 				ObjectID:  objID,
 				PartCount: 2,
-				Subtasks:  make(map[int]*entity.HashCrackSubtask),
+				Subtasks: []*entity.HashCrackSubtask{
+					{
+						PartNumber: 0,
+						Status:     entity.HashCrackSubtaskStatusInProgress,
+					},
+					{
+						PartNumber: 1,
+						Status:     entity.HashCrackSubtaskStatusInProgress,
+					},
+				},
 			}
 
-			mockRepo.On("Get", mock.Anything, mock.Anything).Run(
+			mockTaskRepo.EXPECT().WithTransaction(ctx, mock.Anything).RunAndReturn(
+				func(ctx context.Context, fn func(ctx context.Context) (any, error)) (any, error) {
+					return fn(ctx)
+				}).Once()
+			mockTaskRepo.On("Get", mock.Anything, mock.Anything, true).Run(
 				func(args mock.Arguments) {
 					objectID, ok := args.Get(1).(primitive.ObjectID)
 					assert.True(t, ok)
 					assert.Equal(t, objID.Hex(), objectID.Hex())
 				},
 			).Return(task, nil).Once()
-			mockRepo.On("Update", mock.Anything, mock.Anything).Run(
-				func(args mock.Arguments) {
-					task, ok := args.Get(1).(*entity.HashCrackTask)
-					assert.True(t, ok)
-					assert.Len(t, task.Subtasks, 1)
-				},
-			).Return(nil).Once()
+			mockTaskRepo.On("Update", mock.Anything, mock.Anything).Return(nil).Once()
+			mockSubtaskRepo.On("Update", mock.Anything, mock.Anything).Return(nil).Once()
 
 			// Act
 			err := service.SaveResultSubtask(ctx, input)
@@ -402,91 +494,21 @@ func Test_SaveResultTask(t *testing.T) {
 			require.NoError(t, err)
 		},
 	)
-
-	t.Run(
-		"Task not found", func(t *testing.T) {
-			// Arrange
-			objID := primitive.NewObjectID()
-			input := &message.HashCrackTaskResult{
-				RequestID: objID.Hex(),
-				Answer: &message.Answer{
-					Words:   []string{"word1", "word2"},
-					Percent: 100.0,
-				},
-				Status: entity.HashCrackSubtaskStatusSuccess.String(),
-			}
-
-			mockRepo.On("Get", mock.Anything, mock.Anything).Run(
-				func(args mock.Arguments) {
-					objectID, ok := args.Get(1).(primitive.ObjectID)
-					assert.True(t, ok)
-					assert.Equal(t, objID.Hex(), objectID.Hex())
-				},
-			).Return(nil, repository.ErrCrackTaskNotFound).Once()
-
-			// Act
-			err := service.SaveResultSubtask(ctx, input)
-
-			// Assert
-			require.Error(t, err)
-			require.ErrorIs(t, err, domain.ErrTaskNotFound)
-		},
-	)
-
-	t.Run(
-		"Update error", func(t *testing.T) {
-			// Arrange
-			objID := primitive.NewObjectID()
-			input := &message.HashCrackTaskResult{
-				RequestID:  objID.Hex(),
-				PartNumber: 0,
-				Answer: &message.Answer{
-					Words:   []string{"word1", "word2"},
-					Percent: 100.0,
-				},
-				Status: entity.HashCrackSubtaskStatusSuccess.String(),
-			}
-
-			task := &entity.HashCrackTask{
-				ObjectID:  objID,
-				PartCount: 1,
-				Subtasks:  make(map[int]*entity.HashCrackSubtask),
-			}
-
-			expectedError := errors.New("update failed")
-
-			mockRepo.On("Get", mock.Anything, mock.Anything).Run(
-				func(args mock.Arguments) {
-					objectID, ok := args.Get(1).(primitive.ObjectID)
-					assert.True(t, ok)
-					assert.Equal(t, objID.Hex(), objectID.Hex())
-				},
-			).Return(task, nil).Once()
-			mockRepo.On("Update", mock.Anything, mock.Anything).Return(expectedError).Once()
-
-			// Act
-			err := service.SaveResultSubtask(ctx, input)
-
-			// Assert
-			require.Error(t, err)
-			require.ErrorIs(t, err, expectedError)
-		},
-	)
 }
 
-func TestFinishTasks(t *testing.T) {
+func Test_FinishTasks(t *testing.T) {
 	t.Run(
 		"Success", func(t *testing.T) {
 			// Arrange
-			tasks := []*entity.HashCrackTask{
+			tasks := []*entity.HashCrackTaskWithSubtasks{
 				{
 					ObjectID: primitive.NewObjectID(),
 					Status:   "PENDING",
 				},
 			}
 
-			mockRepo.On("GetAllFinished", mock.Anything).Return(tasks, nil).Once()
-			mockRepo.On("Update", mock.Anything, mock.Anything).Return(nil).Once()
+			mockTaskRepo.On("GetAllFinished", ctx, true).Return(tasks, nil).Once()
+			mockTaskWithSubtasksSvc.On("UpdateTaskWithSubtasks", ctx, mock.Anything).Return(nil).Once()
 
 			// Act
 			err := service.FinishTimeoutTasks(ctx)
@@ -499,7 +521,7 @@ func TestFinishTasks(t *testing.T) {
 	t.Run(
 		"No tasks", func(t *testing.T) {
 			// Arrange
-			mockRepo.On("GetAllFinished", mock.Anything).Return([]*entity.HashCrackTask{}, nil).Once()
+			mockTaskRepo.On("GetAllFinished", ctx, true).Return([]*entity.HashCrackTaskWithSubtasks{}, nil).Once()
 
 			// Act
 			err := service.FinishTimeoutTasks(ctx)
@@ -513,7 +535,7 @@ func TestFinishTasks(t *testing.T) {
 		"GetAllFinished error", func(t *testing.T) {
 			// Arrange
 			expectedError := errors.New("get all finished failed")
-			mockRepo.On("GetAllFinished", mock.Anything).Return(nil, expectedError).Once()
+			mockTaskRepo.On("GetAllFinished", ctx, true).Return(nil, expectedError).Once()
 
 			// Act
 			err := service.FinishTimeoutTasks(ctx)
@@ -527,7 +549,7 @@ func TestFinishTasks(t *testing.T) {
 	t.Run(
 		"Update error", func(t *testing.T) {
 			// Arrange
-			tasks := []*entity.HashCrackTask{
+			tasks := []*entity.HashCrackTaskWithSubtasks{
 				{
 					ObjectID: primitive.NewObjectID(),
 					Status:   "PENDING",
@@ -536,8 +558,8 @@ func TestFinishTasks(t *testing.T) {
 
 			expectedError := errors.New("update failed")
 
-			mockRepo.On("GetAllFinished", mock.Anything).Return(tasks, nil).Once()
-			mockRepo.On("Update", mock.Anything, mock.Anything).Return(expectedError).Once()
+			mockTaskRepo.On("GetAllFinished", ctx, true).Return(tasks, nil).Once()
+			mockTaskWithSubtasksSvc.On("UpdateTaskWithSubtasks", ctx, mock.Anything).Return(expectedError).Once()
 
 			// Act
 			err := service.FinishTimeoutTasks(ctx)
@@ -549,11 +571,19 @@ func TestFinishTasks(t *testing.T) {
 	)
 }
 
-func TestDeleteExpiredTasks(t *testing.T) {
+func Test_DeleteExpiredTasks(t *testing.T) {
 	t.Run(
 		"Success", func(t *testing.T) {
 			// Arrange
-			mockRepo.On("DeleteAllExpired", mock.Anything, mock.Anything).Return(nil).Once()
+			tasks := []*entity.HashCrackTaskWithSubtasks{
+				{
+					ObjectID: primitive.NewObjectID(),
+					Status:   "PENDING",
+				},
+			}
+
+			mockTaskRepo.On("GetAllExpired", ctx, mock.Anything, true).Return(tasks, nil).Once()
+			mockTaskWithSubtasksSvc.On("DeleteTasksWithSubtasks", ctx, tasks).Return(nil).Once()
 
 			// Act
 			err := service.DeleteExpiredTasks(ctx)
@@ -564,10 +594,10 @@ func TestDeleteExpiredTasks(t *testing.T) {
 	)
 
 	t.Run(
-		"DeleteAllExpired error", func(t *testing.T) {
+		"GetAllExpired error", func(t *testing.T) {
 			// Arrange
 			expectedErr := errors.New("repo error")
-			mockRepo.On("DeleteAllExpired", mock.Anything, mock.Anything).Return(expectedErr).Once()
+			mockTaskRepo.On("GetAllExpired", ctx, mock.Anything, true).Return(nil, expectedErr).Once()
 
 			// Act
 			err := service.DeleteExpiredTasks(ctx)
@@ -575,6 +605,138 @@ func TestDeleteExpiredTasks(t *testing.T) {
 			// Assert
 			require.Error(t, err)
 			require.ErrorIs(t, err, expectedErr)
+		},
+	)
+
+	t.Run(
+		"No tasks", func(t *testing.T) {
+			// Arrange
+			tasks := []*entity.HashCrackTaskWithSubtasks{}
+
+			mockTaskRepo.On("GetAllExpired", ctx, mock.Anything, true).Return(tasks, nil).Once()
+			mockTaskWithSubtasksSvc.On("DeleteTaskWithSubtasks", ctx, mock.Anything).Return(nil).Once()
+
+			// Act
+			err := service.DeleteExpiredTasks(ctx)
+
+			// Assert
+			require.NoError(t, err)
+		},
+	)
+
+	t.Run(
+		"DeleteTaskWithSubtasks error", func(t *testing.T) {
+			// Arrange
+			tasks := []*entity.HashCrackTaskWithSubtasks{
+				{
+					ObjectID: primitive.NewObjectID(),
+					Status:   "PENDING",
+				},
+			}
+
+			expectedErr := errors.New("repo error")
+
+			mockTaskRepo.On("GetAllExpired", ctx, mock.Anything, true).Return(tasks, nil).Once()
+			mockTaskWithSubtasksSvc.On("DeleteTasksWithSubtasks", ctx, tasks).Return(expectedErr).Once()
+
+			// Act
+			err := service.DeleteExpiredTasks(ctx)
+
+			// Assert
+			require.Error(t, err)
+			require.ErrorIs(t, err, expectedErr)
+		},
+	)
+}
+
+func Test_ExecutePendingSubtasks(t *testing.T) {
+	t.Run(
+		"GetAllByStatus error", func(t *testing.T) {
+			// Arrange
+			expectedErr := errors.New("repo error")
+
+			mockSubtaskRepo.EXPECT().GetAllByStatus(ctx, entity.HashCrackSubtaskStatusPending).
+				Return(nil, expectedErr).Once()
+
+			// Act
+			err := service.ExecutePendingSubtasks(ctx)
+
+			// Assert
+			require.Error(t, err)
+			require.ErrorIs(t, err, expectedErr)
+		},
+	)
+
+	t.Run(
+		"Get task error", func(t *testing.T) {
+			// Arrange
+			subtasks := []*entity.HashCrackSubtask{
+				{
+					ObjectID: primitive.NewObjectID(),
+					Status:   entity.HashCrackSubtaskStatusPending,
+					TaskID:   primitive.NewObjectID(),
+				},
+			}
+
+			expectedErr := errors.New("repo error")
+
+			mockSubtaskRepo.EXPECT().GetAllByStatus(ctx, entity.HashCrackSubtaskStatusPending).
+				Return(subtasks, nil).Once()
+			mockTaskRepo.EXPECT().Get(ctx, subtasks[0].TaskID, false).
+				Return(nil, expectedErr).Once()
+
+			// Act
+			err := service.ExecutePendingSubtasks(ctx)
+
+			// Assert
+			require.Error(t, err)
+			require.ErrorIs(t, err, expectedErr)
+		},
+	)
+
+	t.Run(
+		"Success - No subtasks", func(t *testing.T) {
+			// Arrange
+			mockSubtaskRepo.EXPECT().GetAllByStatus(ctx, entity.HashCrackSubtaskStatusPending).
+				Return([]*entity.HashCrackSubtask{}, nil).Once()
+
+			// Act
+			err := service.ExecutePendingSubtasks(ctx)
+
+			// Assert
+			require.NoError(t, err)
+		},
+	)
+
+	t.Run(
+		"Success - Has subtasks", func(t *testing.T) {
+			// Arrange
+			subtasks := []*entity.HashCrackSubtask{
+				{
+					ObjectID: primitive.NewObjectID(),
+					Status:   entity.HashCrackSubtaskStatusPending,
+					TaskID:   primitive.NewObjectID(),
+				},
+			}
+			task := &entity.HashCrackTaskWithSubtasks{
+				ObjectID: subtasks[0].TaskID,
+				Status:   entity.HashCrackTaskStatusInProgress,
+			}
+
+			mockSubtaskRepo.EXPECT().GetAllByStatus(ctx, entity.HashCrackSubtaskStatusPending).
+				Return(subtasks, nil).Once()
+			mockTaskRepo.EXPECT().Get(ctx, subtasks[0].TaskID, false).
+				Return(task, nil).Once()
+			mockPublisher.EXPECT().SendMessage(ctx, mock.Anything, publisher.Persistent, false, false).
+				Return(nil).Times(1)
+			mockTaskRepo.EXPECT().Update(ctx, task.ToHashCrackTask()).Return(nil).Once()
+			mockSubtaskRepo.EXPECT().Update(ctx, subtasks[0]).Return(nil).Times(1)
+
+			// Act
+			err := service.ExecutePendingSubtasks(ctx)
+
+			// Assert
+			require.NoError(t, err)
 		},
 	)
 }

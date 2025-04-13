@@ -10,7 +10,14 @@ type HashCrackTaskIDOutput struct {
 }
 
 type HashCrackTaskStatusOutput struct {
-	Status  string   `json:"status" validate:"required,oneof=IN_PROGRESS READY PARTIAL_READY ERROR UNKNOWN"`
+	Status   string                         `json:"status" validate:"required,oneof=PENDING IN_PROGRESS READY PARTIAL_READY ERROR UNKNOWN"`
+	Data     []string                       `json:"data" validate:"required,min=0,dive,required"`
+	Percent  float64                        `json:"percent" validate:"required,min=0,max=100"`
+	Subtasks []HashCrackSubtaskStatusOutput `json:"subtasks" validate:"required,min=0,dive"`
+}
+
+type HashCrackSubtaskStatusOutput struct {
+	Status  string   `json:"status" validate:"required,oneof=PENDING IN_PROGRESS SUCCESS ERROR UNKNOWN"`
 	Data    []string `json:"data" validate:"required,min=0,dive,required"`
 	Percent float64  `json:"percent" validate:"required,min=0,max=100"`
 }

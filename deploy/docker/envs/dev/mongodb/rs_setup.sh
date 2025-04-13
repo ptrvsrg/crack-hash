@@ -2,7 +2,7 @@
 sleep 10
 
 echo "Initializing replica set..."
-mongosh --host mongo1:27017 -u $MONGO_USERNAME -p $MONGO_PASSWORD --authenticationDatabase admin <<EOF
+mongosh --host 172.28.0.10:27017 -u $MONGO_INITDB_ROOT_USERNAME -p $MONGO_INITDB_ROOT_PASSWORD --authenticationDatabase admin <<EOF
   var cfg = {
     "_id": "rs0",
     "members": [

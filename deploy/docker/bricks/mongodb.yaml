@@ -1,0 +1,141 @@
+version: "3.8"
+
+x-mongo-defaults: &mongo-defaults
+  image: mongo:7.0.17-jammy
+  restart: unless-stopped
+  command: [ "--config", "/etc/mongodb/mongod.conf" ]
+  healthcheck:
+    test: echo 'db.runCommand({serverStatus:1}).ok' | mongosh admin -u $$MONGO_INITDB_ROOT_USERNAME -p $$MONGO_INITDB_ROOT_PASSWORD --quiet | grep 1
+  volumes:
+    - mongo-data:/data/db
+    - mongo-config:/data/configdb
+    - mongo-logs:/var/log/mongodb
+    - mongo-rs-pki:/etc/mongodb/pki:ro
+    - ./envs/${ENVIRONMENT:-stable}/mongodb/mongod.conf:/etc/mongodb/mongod.conf:ro
+  networks:
+    - net
+  deploy:
+    resources:
+      limits:
+        cpus: "2.0"
+        memory: "2G"
+      reservations:
+        cpus: "1.0"
+        memory: "1G"
+
+x-mongo-defaults-environment: &mongo-defaults-environment
+  MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:-admin}
+  MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-password}
+  MONGO_INITDB_DATABASE: ${MONGO_DATABASE:-crack_hash}
+
+services:
+  mongo-pki-setup:
+    image: mongo:7.0.17-jammy
+    restart: no
+    entrypoint: [ "bash", "/scripts/pki_setup.sh" ]
+    volumes:
+      - ./envs/${ENVIRONMENT:-stable}/mongodb/pki_setup.sh:/scripts/pki_setup.sh
+      - mongo-rs-pki:/etc/mongodb/pki
+    networks:
+      - net
+
+  mongo1:
+    <<: *mongo-defaults
+    environment:
+      <<: *mongo-defaults-environment
+    volumes:
+      - mongo1-data:/data/db
+      - mongo1-config:/data/configdb
+      - mongo1-logs:/var/log/mongodb
+      - mongo-rs-pki:/etc/mongodb/pki:ro
+      - ./envs/${ENVIRONMENT:-stable}/mongodb/mongod.conf:/etc/mongodb/mongod.conf:ro
+      - ./envs/${ENVIRONMENT:-stable}/mongodb/scheme_setup.js:/docker-entrypoint-initdb.d/scheme_setup.js
+    depends_on:
+      mongo-pki-setup:
+        condition: service_completed_successfully
+
+  mongo2:
+    <<: *mongo-defaults
+    environment:
+      <<: *mongo-defaults-environment
+    volumes:
+      - mongo2-data:/data/db
+      - mongo2-config:/data/configdb
+      - mongo2-logs:/var/log/mongodb
+      - mongo-rs-pki:/etc/mongodb/pki:ro
+      - ./envs/${ENVIRONMENT:-stable}/mongodb/mongod.conf:/etc/mongodb/mongod.conf:ro
+    depends_on:
+      mongo-pki-setup:
+        condition: service_completed_successfully
+
+  mongo3:
+    <<: *mongo-defaults
+    environment:
+      <<: *mongo-defaults-environment
+    volumes:
+      - mongo3-data:/data/db
+      - mongo3-config:/data/configdb
+      - mongo3-logs:/var/log/mongodb
+      - mongo-rs-pki:/etc/mongodb/pki:ro
+      - ./envs/${ENVIRONMENT:-stable}/mongodb/mongod.conf:/etc/mongodb/mongod.conf:ro
+    depends_on:
+      mongo-pki-setup:
+        condition: service_completed_successfully
+
+  mongo-rs-setup:
+    image: mongo:7.0.17-jammy
+    restart: no
+    entrypoint: [ "bash", "/scripts/rs_setup.sh" ]
+    environment:
+      <<: *mongo-defaults-environment
+    volumes:
+      - ./envs/${ENVIRONMENT:-stable}/mongodb/rs_setup.sh:/scripts/rs_setup.sh
+    networks:
+      - net
+    depends_on:
+      mongo1:
+        condition: service_healthy
+      mongo2:
+        condition: service_healthy
+      mongo3:
+        condition: service_healthy
+
+  mongo-express:
+    image: mongo-express:1.0.2-20-alpine3.19
+    restart: unless-stopped
+    healthcheck:
+      test: [ 'CMD-SHELL', 'wget -O - http://0.0.0.0:8081/services/mongo-express/status | grep "{\"status\":\"ok\"}"' ]
+    environment:
+      ME_CONFIG_MONGODB_URL: mongodb://${MONGO_USERNAME:-admin}:${MONGO_PASSWORD:-password}@mongo1:27017,mongo2:27017,mongo3:27017?replicaSet=rs0
+      ME_CONFIG_SITE_BASEURL: /services/mongo-express
+      ME_CONFIG_BASICAUTH_USERNAME: ${MONGO_EXPRESS_USERNAME:-admin}
+      ME_CONFIG_BASICAUTH_PASSWORD: ${MONGO_EXPRESS_PASSWORD:-password}
+    networks:
+      - net
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: "100M"
+        reservations:
+          cpus: "0.1"
+          memory: "50M"
+    depends_on:
+      mongo1:
+        condition: service_healthy
+      mongo2:
+        condition: service_healthy
+      mongo3:
+        condition: service_healthy
+
+volumes:
+  mongo-rs-pki:
+  mongo1-data:
+  mongo2-data:
+  mongo3-data:
+  mongo1-config:
+  mongo2-config:
+  mongo3-config:
+  mongo1-logs:
+  mongo2-logs:
+  mongo3-logs:

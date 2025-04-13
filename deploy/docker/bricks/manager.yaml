@@ -1,0 +1,46 @@
+version: "3.8"
+
+services:
+  manager:
+    build:
+      context: ../..
+      dockerfile: manager/Dockerfile
+      args:
+        ARTIFACT_VERSION: ${MANAGER_ARTIFACT_VERSION:-latest}
+    image: ghcr.io/ptrvsrg/crack-hash:manager-${MANAGER_ARTIFACT_VERSION:-latest}
+    restart: unless-stopped
+    environment:
+      MONGODB_USERNAME: ${MONGO_USERNAME:-admin}
+      MONGODB_PASSWORD: ${MONGO_PASSWORD:-password}
+      MONGODB_DB: ${MONGO_DATABASE:-crack_hash}
+      AMQP_USERNAME: ${RABBITMQ_USERNAME:-admin}
+      AMQP_PASSWORD: ${RABBITMQ_PASSWORD:-password}
+    healthcheck:
+      test: [ "CMD-SHELL", "/app/manager healthcheck" ]
+    volumes:
+      - ./envs/${ENVIRONMENT:-stable}/manager/config.yaml:/app/config/config.yaml:ro
+    networks:
+      - net
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: "200M"
+        reservations:
+          cpus: "0.1"
+          memory: "100M"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    depends_on:
+      mongo-rs-setup:
+        condition: service_completed_successfully
+      rabbitmq1:
+        condition: service_healthy
+      rabbitmq2:
+        condition: service_healthy
+      rabbitmq3:
+        condition: service_healthy

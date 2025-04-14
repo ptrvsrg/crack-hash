@@ -202,7 +202,7 @@ func (r *repo) UpdateAll(ctx context.Context, tasks []*entity.HashCrackSubtask) 
 		}
 	}
 
-	return multierr.Combine(errs...)
+	return fmt.Errorf("failed to update documents: %w", multierr.Combine(errs...))
 }
 
 func (r *repo) DeleteAllByIDs(ctx context.Context, ids []primitive.ObjectID) error {

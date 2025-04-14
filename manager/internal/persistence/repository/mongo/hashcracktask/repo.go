@@ -81,7 +81,7 @@ func (r *repo) WithTransaction(ctx context.Context, fn func(ctx context.Context)
 	}
 	defer session.EndSession(ctx)
 
-	sessionFn := func(sessionContext mongo.SessionContext) (any, error) {
+	sessionFn := func(sessionContext mongo.SessionContext) (any, error) { //nolint:contextcheck
 		return fn(sessionContext)
 	}
 

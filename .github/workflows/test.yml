@@ -22,7 +22,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
-          go-version: '1.23.5'
+          go-version: '1.24.2'
           cache-dependency-path: ${{ matrix.service }}/go.sum
       - name: Build ${{ matrix.service }}
         working-directory: ${{ matrix.service }}
@@ -44,7 +44,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
-          go-version: '1.23.5'
+          go-version: '1.24.2'
           cache-dependency-path: ${{ matrix.service }}/go.sum
       - name: golangci-lint ${{ matrix.service }}
         uses: golangci/golangci-lint-action@v6
@@ -69,7 +69,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
-          go-version: '1.23.5'
+          go-version: '1.24.2'
           cache-dependency-path: ${{ matrix.service }}/go.sum
       - name: Test ${{ matrix.service }}
         working-directory: ${{ matrix.service }}
@@ -91,7 +91,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
-          go-version: '1.23.5'
+          go-version: '1.24.2'
           cache-dependency-path: ${{ matrix.service }}/go.sum
       - name: Test ${{ matrix.service }}
         working-directory: ${{ matrix.service }}

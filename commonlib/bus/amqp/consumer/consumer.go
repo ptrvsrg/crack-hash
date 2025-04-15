@@ -110,7 +110,7 @@ func (c *consumer[T]) Subscribe(ctx context.Context) {
 			}
 
 			// catch panic
-			func() {
+			go func() {
 				defer func() {
 					if r := recover(); r != nil {
 						c.logger.Error().Msgf("catch panic: %v\n%s", r, string(debug.Stack()))

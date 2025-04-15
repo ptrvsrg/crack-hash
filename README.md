@@ -21,7 +21,7 @@ See [arch.drawio](./.assets/arch.drawio)
 
 ### Requirements
 
-- Golang 1.23.5
+- Golang 1.24.2
 - Docker
 - Docker Compose
 - Make (optional)

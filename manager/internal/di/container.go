@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/ptrvsrg/crack-hash/manager/internal/persistence/repository/mongo/hashcracksubtask"
+	"github.com/ptrvsrg/crack-hash/manager/internal/service/infrastructure/taskwithsubtasks"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -160,6 +162,9 @@ func (c *Container) setupRepositories(_ context.Context) {
 		HashCrackTask: hashcracktask.NewRepo(
 			c.Logger, c.Providers.MongoDB, c.Config.MongoDB,
 		),
+		HashCrackSubtask: hashcracksubtask.NewRepo(
+			c.Logger, c.Providers.MongoDB, c.Config.MongoDB,
+		),
 	}
 }
 
@@ -181,19 +186,19 @@ func (c *Container) setupServices(_ context.Context) {
 	c.Logger.Info().Msg("setup services")
 
 	c.InfraSVCs = infrastructure.Services{
-		TaskSplit: factory.NewService(c.Logger, c.Config.Task.Split),
+		TaskSplit:        factory.NewService(c.Logger, c.Config.Task.Split),
+		TaskWithSubtasks: taskwithsubtasks.NewService(c.Repos.HashCrackTask, c.Repos.HashCrackSubtask),
 	}
+
 	c.DomainSVCs = domain.Services{
-		Health: health.NewService(
-			c.Logger,
-			c.Providers.MongoDB,
-			c.Providers.AMQPConn,
-		),
+		Health: health.NewService(c.Logger, c.Providers.MongoDB, c.Providers.AMQPConn),
 		HashCrackTask: hashcrack.NewService(
 			c.Logger,
 			c.Config.Task,
 			c.Repos.HashCrackTask,
+			c.Repos.HashCrackSubtask,
 			c.InfraSVCs.TaskSplit,
+			c.InfraSVCs.TaskWithSubtasks,
 			c.Publishers.TaskStarted,
 		),
 	}

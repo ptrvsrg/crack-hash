@@ -34,4 +34,5 @@ task:
   timeout: 1h
   limit: 10
   maxage: 24h
+  restartdelay: 1m
   finishdelay: 1m

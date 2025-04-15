@@ -1,14 +1,14 @@
 module github.com/ptrvsrg/crack-hash/commonlib
 
-go 1.23.5
+go 1.24.2
 
 require (
 	atomicgo.dev/robin v0.1.0
 	github.com/gin-gonic/gin v1.10.0
 	github.com/go-co-op/gocron v1.37.0
 	github.com/go-http-utils/headers v0.0.0-20181008091004-fed159eddc2a
-	github.com/go-playground/validator/v10 v10.25.0
-	github.com/goccy/go-json v0.10.2
+	github.com/go-playground/validator/v10 v10.26.0
+	github.com/goccy/go-json v0.10.5
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
 	github.com/num30/config v0.1.3

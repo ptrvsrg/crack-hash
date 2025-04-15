@@ -73,17 +73,17 @@ func (_c *HashCrackTaskMock_Create_Call) RunAndReturn(run func(context.Context, 
 	return _c
 }
 
-// DeleteAllExpired provides a mock function with given fields: ctx, maxAge
-func (_m *HashCrackTaskMock) DeleteAllExpired(ctx context.Context, maxAge time.Duration) error {
-	ret := _m.Called(ctx, maxAge)
+// DeleteAllByIDs provides a mock function with given fields: ctx, ids
+func (_m *HashCrackTaskMock) DeleteAllByIDs(ctx context.Context, ids []primitive.ObjectID) error {
+	ret := _m.Called(ctx, ids)
 
 	if len(ret) == 0 {
-		panic("no return value specified for DeleteAllExpired")
+		panic("no return value specified for DeleteAllByIDs")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, time.Duration) error); ok {
-		r0 = rf(ctx, maxAge)
+	if rf, ok := ret.Get(0).(func(context.Context, []primitive.ObjectID) error); ok {
+		r0 = rf(ctx, ids)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -91,58 +91,58 @@ func (_m *HashCrackTaskMock) DeleteAllExpired(ctx context.Context, maxAge time.D
 	return r0
 }
 
-// HashCrackTaskMock_DeleteAllExpired_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteAllExpired'
-type HashCrackTaskMock_DeleteAllExpired_Call struct {
+// HashCrackTaskMock_DeleteAllByIDs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteAllByIDs'
+type HashCrackTaskMock_DeleteAllByIDs_Call struct {
 	*mock.Call
 }
 
-// DeleteAllExpired is a helper method to define mock.On call
+// DeleteAllByIDs is a helper method to define mock.On call
 //   - ctx context.Context
-//   - maxAge time.Duration
-func (_e *HashCrackTaskMock_Expecter) DeleteAllExpired(ctx interface{}, maxAge interface{}) *HashCrackTaskMock_DeleteAllExpired_Call {
-	return &HashCrackTaskMock_DeleteAllExpired_Call{Call: _e.mock.On("DeleteAllExpired", ctx, maxAge)}
+//   - ids []primitive.ObjectID
+func (_e *HashCrackTaskMock_Expecter) DeleteAllByIDs(ctx interface{}, ids interface{}) *HashCrackTaskMock_DeleteAllByIDs_Call {
+	return &HashCrackTaskMock_DeleteAllByIDs_Call{Call: _e.mock.On("DeleteAllByIDs", ctx, ids)}
 }
 
-func (_c *HashCrackTaskMock_DeleteAllExpired_Call) Run(run func(ctx context.Context, maxAge time.Duration)) *HashCrackTaskMock_DeleteAllExpired_Call {
+func (_c *HashCrackTaskMock_DeleteAllByIDs_Call) Run(run func(ctx context.Context, ids []primitive.ObjectID)) *HashCrackTaskMock_DeleteAllByIDs_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(time.Duration))
+		run(args[0].(context.Context), args[1].([]primitive.ObjectID))
 	})
 	return _c
 }
 
-func (_c *HashCrackTaskMock_DeleteAllExpired_Call) Return(_a0 error) *HashCrackTaskMock_DeleteAllExpired_Call {
+func (_c *HashCrackTaskMock_DeleteAllByIDs_Call) Return(_a0 error) *HashCrackTaskMock_DeleteAllByIDs_Call {
 	_c.Call.Return(_a0)
 	return _c
 }
 
-func (_c *HashCrackTaskMock_DeleteAllExpired_Call) RunAndReturn(run func(context.Context, time.Duration) error) *HashCrackTaskMock_DeleteAllExpired_Call {
+func (_c *HashCrackTaskMock_DeleteAllByIDs_Call) RunAndReturn(run func(context.Context, []primitive.ObjectID) error) *HashCrackTaskMock_DeleteAllByIDs_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// Get provides a mock function with given fields: ctx, id
-func (_m *HashCrackTaskMock) Get(ctx context.Context, id primitive.ObjectID) (*entity.HashCrackTask, error) {
-	ret := _m.Called(ctx, id)
+// Get provides a mock function with given fields: ctx, id, withSubtasks
+func (_m *HashCrackTaskMock) Get(ctx context.Context, id primitive.ObjectID, withSubtasks bool) (*entity.HashCrackTaskWithSubtasks, error) {
+	ret := _m.Called(ctx, id, withSubtasks)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Get")
 	}
 
-	var r0 *entity.HashCrackTask
+	var r0 *entity.HashCrackTaskWithSubtasks
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, primitive.ObjectID) (*entity.HashCrackTask, error)); ok {
-		return rf(ctx, id)
+	if rf, ok := ret.Get(0).(func(context.Context, primitive.ObjectID, bool) (*entity.HashCrackTaskWithSubtasks, error)); ok {
+		return rf(ctx, id, withSubtasks)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, primitive.ObjectID) *entity.HashCrackTask); ok {
-		r0 = rf(ctx, id)
+	if rf, ok := ret.Get(0).(func(context.Context, primitive.ObjectID, bool) *entity.HashCrackTaskWithSubtasks); ok {
+		r0 = rf(ctx, id, withSubtasks)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*entity.HashCrackTask)
+			r0 = ret.Get(0).(*entity.HashCrackTaskWithSubtasks)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, primitive.ObjectID) error); ok {
-		r1 = rf(ctx, id)
+	if rf, ok := ret.Get(1).(func(context.Context, primitive.ObjectID, bool) error); ok {
+		r1 = rf(ctx, id, withSubtasks)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -158,50 +158,51 @@ type HashCrackTaskMock_Get_Call struct {
 // Get is a helper method to define mock.On call
 //   - ctx context.Context
 //   - id primitive.ObjectID
-func (_e *HashCrackTaskMock_Expecter) Get(ctx interface{}, id interface{}) *HashCrackTaskMock_Get_Call {
-	return &HashCrackTaskMock_Get_Call{Call: _e.mock.On("Get", ctx, id)}
+//   - withSubtasks bool
+func (_e *HashCrackTaskMock_Expecter) Get(ctx interface{}, id interface{}, withSubtasks interface{}) *HashCrackTaskMock_Get_Call {
+	return &HashCrackTaskMock_Get_Call{Call: _e.mock.On("Get", ctx, id, withSubtasks)}
 }
 
-func (_c *HashCrackTaskMock_Get_Call) Run(run func(ctx context.Context, id primitive.ObjectID)) *HashCrackTaskMock_Get_Call {
+func (_c *HashCrackTaskMock_Get_Call) Run(run func(ctx context.Context, id primitive.ObjectID, withSubtasks bool)) *HashCrackTaskMock_Get_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(primitive.ObjectID))
+		run(args[0].(context.Context), args[1].(primitive.ObjectID), args[2].(bool))
 	})
 	return _c
 }
 
-func (_c *HashCrackTaskMock_Get_Call) Return(_a0 *entity.HashCrackTask, _a1 error) *HashCrackTaskMock_Get_Call {
+func (_c *HashCrackTaskMock_Get_Call) Return(_a0 *entity.HashCrackTaskWithSubtasks, _a1 error) *HashCrackTaskMock_Get_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *HashCrackTaskMock_Get_Call) RunAndReturn(run func(context.Context, primitive.ObjectID) (*entity.HashCrackTask, error)) *HashCrackTaskMock_Get_Call {
+func (_c *HashCrackTaskMock_Get_Call) RunAndReturn(run func(context.Context, primitive.ObjectID, bool) (*entity.HashCrackTaskWithSubtasks, error)) *HashCrackTaskMock_Get_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// GetAllByHashAndMaxLength provides a mock function with given fields: ctx, hash, maxLength
-func (_m *HashCrackTaskMock) GetAllByHashAndMaxLength(ctx context.Context, hash string, maxLength int) ([]*entity.HashCrackTask, error) {
-	ret := _m.Called(ctx, hash, maxLength)
+// GetAllExpired provides a mock function with given fields: ctx, maxAge, withSubtasks
+func (_m *HashCrackTaskMock) GetAllExpired(ctx context.Context, maxAge time.Duration, withSubtasks bool) ([]*entity.HashCrackTaskWithSubtasks, error) {
+	ret := _m.Called(ctx, maxAge, withSubtasks)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetAllByHashAndMaxLength")
+		panic("no return value specified for GetAllExpired")
 	}
 
-	var r0 []*entity.HashCrackTask
+	var r0 []*entity.HashCrackTaskWithSubtasks
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, int) ([]*entity.HashCrackTask, error)); ok {
-		return rf(ctx, hash, maxLength)
+	if rf, ok := ret.Get(0).(func(context.Context, time.Duration, bool) ([]*entity.HashCrackTaskWithSubtasks, error)); ok {
+		return rf(ctx, maxAge, withSubtasks)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, int) []*entity.HashCrackTask); ok {
-		r0 = rf(ctx, hash, maxLength)
+	if rf, ok := ret.Get(0).(func(context.Context, time.Duration, bool) []*entity.HashCrackTaskWithSubtasks); ok {
+		r0 = rf(ctx, maxAge, withSubtasks)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*entity.HashCrackTask)
+			r0 = ret.Get(0).([]*entity.HashCrackTaskWithSubtasks)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string, int) error); ok {
-		r1 = rf(ctx, hash, maxLength)
+	if rf, ok := ret.Get(1).(func(context.Context, time.Duration, bool) error); ok {
+		r1 = rf(ctx, maxAge, withSubtasks)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -209,59 +210,59 @@ func (_m *HashCrackTaskMock) GetAllByHashAndMaxLength(ctx context.Context, hash 
 	return r0, r1
 }
 
-// HashCrackTaskMock_GetAllByHashAndMaxLength_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAllByHashAndMaxLength'
-type HashCrackTaskMock_GetAllByHashAndMaxLength_Call struct {
+// HashCrackTaskMock_GetAllExpired_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAllExpired'
+type HashCrackTaskMock_GetAllExpired_Call struct {
 	*mock.Call
 }
 
-// GetAllByHashAndMaxLength is a helper method to define mock.On call
+// GetAllExpired is a helper method to define mock.On call
 //   - ctx context.Context
-//   - hash string
-//   - maxLength int
-func (_e *HashCrackTaskMock_Expecter) GetAllByHashAndMaxLength(ctx interface{}, hash interface{}, maxLength interface{}) *HashCrackTaskMock_GetAllByHashAndMaxLength_Call {
-	return &HashCrackTaskMock_GetAllByHashAndMaxLength_Call{Call: _e.mock.On("GetAllByHashAndMaxLength", ctx, hash, maxLength)}
+//   - maxAge time.Duration
+//   - withSubtasks bool
+func (_e *HashCrackTaskMock_Expecter) GetAllExpired(ctx interface{}, maxAge interface{}, withSubtasks interface{}) *HashCrackTaskMock_GetAllExpired_Call {
+	return &HashCrackTaskMock_GetAllExpired_Call{Call: _e.mock.On("GetAllExpired", ctx, maxAge, withSubtasks)}
 }
 
-func (_c *HashCrackTaskMock_GetAllByHashAndMaxLength_Call) Run(run func(ctx context.Context, hash string, maxLength int)) *HashCrackTaskMock_GetAllByHashAndMaxLength_Call {
+func (_c *HashCrackTaskMock_GetAllExpired_Call) Run(run func(ctx context.Context, maxAge time.Duration, withSubtasks bool)) *HashCrackTaskMock_GetAllExpired_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string), args[2].(int))
+		run(args[0].(context.Context), args[1].(time.Duration), args[2].(bool))
 	})
 	return _c
 }
 
-func (_c *HashCrackTaskMock_GetAllByHashAndMaxLength_Call) Return(_a0 []*entity.HashCrackTask, _a1 error) *HashCrackTaskMock_GetAllByHashAndMaxLength_Call {
+func (_c *HashCrackTaskMock_GetAllExpired_Call) Return(_a0 []*entity.HashCrackTaskWithSubtasks, _a1 error) *HashCrackTaskMock_GetAllExpired_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *HashCrackTaskMock_GetAllByHashAndMaxLength_Call) RunAndReturn(run func(context.Context, string, int) ([]*entity.HashCrackTask, error)) *HashCrackTaskMock_GetAllByHashAndMaxLength_Call {
+func (_c *HashCrackTaskMock_GetAllExpired_Call) RunAndReturn(run func(context.Context, time.Duration, bool) ([]*entity.HashCrackTaskWithSubtasks, error)) *HashCrackTaskMock_GetAllExpired_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// GetAllFinished provides a mock function with given fields: ctx
-func (_m *HashCrackTaskMock) GetAllFinished(ctx context.Context) ([]*entity.HashCrackTask, error) {
-	ret := _m.Called(ctx)
+// GetAllFinished provides a mock function with given fields: ctx, withSubtasks
+func (_m *HashCrackTaskMock) GetAllFinished(ctx context.Context, withSubtasks bool) ([]*entity.HashCrackTaskWithSubtasks, error) {
+	ret := _m.Called(ctx, withSubtasks)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetAllFinished")
 	}
 
-	var r0 []*entity.HashCrackTask
+	var r0 []*entity.HashCrackTaskWithSubtasks
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context) ([]*entity.HashCrackTask, error)); ok {
-		return rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, bool) ([]*entity.HashCrackTaskWithSubtasks, error)); ok {
+		return rf(ctx, withSubtasks)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context) []*entity.HashCrackTask); ok {
-		r0 = rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, bool) []*entity.HashCrackTaskWithSubtasks); ok {
+		r0 = rf(ctx, withSubtasks)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*entity.HashCrackTask)
+			r0 = ret.Get(0).([]*entity.HashCrackTaskWithSubtasks)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = rf(ctx)
+	if rf, ok := ret.Get(1).(func(context.Context, bool) error); ok {
+		r1 = rf(ctx, withSubtasks)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -276,23 +277,85 @@ type HashCrackTaskMock_GetAllFinished_Call struct {
 
 // GetAllFinished is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *HashCrackTaskMock_Expecter) GetAllFinished(ctx interface{}) *HashCrackTaskMock_GetAllFinished_Call {
-	return &HashCrackTaskMock_GetAllFinished_Call{Call: _e.mock.On("GetAllFinished", ctx)}
+//   - withSubtasks bool
+func (_e *HashCrackTaskMock_Expecter) GetAllFinished(ctx interface{}, withSubtasks interface{}) *HashCrackTaskMock_GetAllFinished_Call {
+	return &HashCrackTaskMock_GetAllFinished_Call{Call: _e.mock.On("GetAllFinished", ctx, withSubtasks)}
 }
 
-func (_c *HashCrackTaskMock_GetAllFinished_Call) Run(run func(ctx context.Context)) *HashCrackTaskMock_GetAllFinished_Call {
+func (_c *HashCrackTaskMock_GetAllFinished_Call) Run(run func(ctx context.Context, withSubtasks bool)) *HashCrackTaskMock_GetAllFinished_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context))
+		run(args[0].(context.Context), args[1].(bool))
 	})
 	return _c
 }
 
-func (_c *HashCrackTaskMock_GetAllFinished_Call) Return(_a0 []*entity.HashCrackTask, _a1 error) *HashCrackTaskMock_GetAllFinished_Call {
+func (_c *HashCrackTaskMock_GetAllFinished_Call) Return(_a0 []*entity.HashCrackTaskWithSubtasks, _a1 error) *HashCrackTaskMock_GetAllFinished_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *HashCrackTaskMock_GetAllFinished_Call) RunAndReturn(run func(context.Context) ([]*entity.HashCrackTask, error)) *HashCrackTaskMock_GetAllFinished_Call {
+func (_c *HashCrackTaskMock_GetAllFinished_Call) RunAndReturn(run func(context.Context, bool) ([]*entity.HashCrackTaskWithSubtasks, error)) *HashCrackTaskMock_GetAllFinished_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetByHashAndMaxLength provides a mock function with given fields: ctx, hash, maxLength, withSubtasks
+func (_m *HashCrackTaskMock) GetByHashAndMaxLength(ctx context.Context, hash string, maxLength int, withSubtasks bool) (*entity.HashCrackTaskWithSubtasks, error) {
+	ret := _m.Called(ctx, hash, maxLength, withSubtasks)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetByHashAndMaxLength")
+	}
+
+	var r0 *entity.HashCrackTaskWithSubtasks
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, int, bool) (*entity.HashCrackTaskWithSubtasks, error)); ok {
+		return rf(ctx, hash, maxLength, withSubtasks)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, int, bool) *entity.HashCrackTaskWithSubtasks); ok {
+		r0 = rf(ctx, hash, maxLength, withSubtasks)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*entity.HashCrackTaskWithSubtasks)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string, int, bool) error); ok {
+		r1 = rf(ctx, hash, maxLength, withSubtasks)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// HashCrackTaskMock_GetByHashAndMaxLength_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetByHashAndMaxLength'
+type HashCrackTaskMock_GetByHashAndMaxLength_Call struct {
+	*mock.Call
+}
+
+// GetByHashAndMaxLength is a helper method to define mock.On call
+//   - ctx context.Context
+//   - hash string
+//   - maxLength int
+//   - withSubtasks bool
+func (_e *HashCrackTaskMock_Expecter) GetByHashAndMaxLength(ctx interface{}, hash interface{}, maxLength interface{}, withSubtasks interface{}) *HashCrackTaskMock_GetByHashAndMaxLength_Call {
+	return &HashCrackTaskMock_GetByHashAndMaxLength_Call{Call: _e.mock.On("GetByHashAndMaxLength", ctx, hash, maxLength, withSubtasks)}
+}
+
+func (_c *HashCrackTaskMock_GetByHashAndMaxLength_Call) Run(run func(ctx context.Context, hash string, maxLength int, withSubtasks bool)) *HashCrackTaskMock_GetByHashAndMaxLength_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(int), args[3].(bool))
+	})
+	return _c
+}
+
+func (_c *HashCrackTaskMock_GetByHashAndMaxLength_Call) Return(_a0 *entity.HashCrackTaskWithSubtasks, _a1 error) *HashCrackTaskMock_GetByHashAndMaxLength_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *HashCrackTaskMock_GetByHashAndMaxLength_Call) RunAndReturn(run func(context.Context, string, int, bool) (*entity.HashCrackTaskWithSubtasks, error)) *HashCrackTaskMock_GetByHashAndMaxLength_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -340,6 +403,65 @@ func (_c *HashCrackTaskMock_Update_Call) Return(_a0 error) *HashCrackTaskMock_Up
 }
 
 func (_c *HashCrackTaskMock_Update_Call) RunAndReturn(run func(context.Context, *entity.HashCrackTask) error) *HashCrackTaskMock_Update_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// WithTransaction provides a mock function with given fields: ctx, fn
+func (_m *HashCrackTaskMock) WithTransaction(ctx context.Context, fn func(context.Context) (any, error)) (any, error) {
+	ret := _m.Called(ctx, fn)
+
+	if len(ret) == 0 {
+		panic("no return value specified for WithTransaction")
+	}
+
+	var r0 any
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, func(context.Context) (any, error)) (any, error)); ok {
+		return rf(ctx, fn)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, func(context.Context) (any, error)) any); ok {
+		r0 = rf(ctx, fn)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(any)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, func(context.Context) (any, error)) error); ok {
+		r1 = rf(ctx, fn)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// HashCrackTaskMock_WithTransaction_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'WithTransaction'
+type HashCrackTaskMock_WithTransaction_Call struct {
+	*mock.Call
+}
+
+// WithTransaction is a helper method to define mock.On call
+//   - ctx context.Context
+//   - fn func(context.Context)(any , error)
+func (_e *HashCrackTaskMock_Expecter) WithTransaction(ctx interface{}, fn interface{}) *HashCrackTaskMock_WithTransaction_Call {
+	return &HashCrackTaskMock_WithTransaction_Call{Call: _e.mock.On("WithTransaction", ctx, fn)}
+}
+
+func (_c *HashCrackTaskMock_WithTransaction_Call) Run(run func(ctx context.Context, fn func(context.Context) (any, error))) *HashCrackTaskMock_WithTransaction_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(func(context.Context) (any, error)))
+	})
+	return _c
+}
+
+func (_c *HashCrackTaskMock_WithTransaction_Call) Return(_a0 any, _a1 error) *HashCrackTaskMock_WithTransaction_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *HashCrackTaskMock_WithTransaction_Call) RunAndReturn(run func(context.Context, func(context.Context) (any, error)) (any, error)) *HashCrackTaskMock_WithTransaction_Call {
 	_c.Call.Return(run)
 	return _c
 }

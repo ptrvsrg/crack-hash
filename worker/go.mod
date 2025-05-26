@@ -3,7 +3,7 @@ module github.com/ptrvsrg/crack-hash/worker
 go 1.24.2
 
 require (
-	github.com/gin-gonic/gin v1.10.0
+	github.com/gin-gonic/gin v1.10.1
 	github.com/joho/godotenv v1.5.1
 	github.com/ptrvsrg/crack-hash/commonlib v0.0.0-local
 	github.com/ptrvsrg/crack-hash/manager v0.0.0-local

@@ -3,7 +3,7 @@ module github.com/ptrvsrg/crack-hash/manager
 go 1.24.2
 
 require (
-	github.com/gin-gonic/gin v1.10.0
+	github.com/gin-gonic/gin v1.10.1
 	github.com/go-co-op/gocron v1.37.0
 	github.com/joho/godotenv v1.5.1
 	github.com/ptrvsrg/crack-hash/commonlib v0.0.0-local

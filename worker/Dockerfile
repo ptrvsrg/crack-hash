@@ -30,7 +30,7 @@ RUN go build \
     	-X github.com/ptrvsrg/crack-hash/worker/internal/version.Platform=$(go env GOOS)/$(go env GOARCH)" \
     ./cmd/cli
 
-FROM alpine:3.21 AS runtime
+FROM alpine:3.22 AS runtime
 
 WORKDIR /app
 

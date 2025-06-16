@@ -12,7 +12,7 @@ require (
 	github.com/samber/lo v1.49.1
 	github.com/stretchr/testify v1.10.0
 	github.com/swaggo/swag v1.16.4
-	github.com/urfave/cli/v3 v3.1.1
+	github.com/urfave/cli/v3 v3.3.8
 	go.mongodb.org/mongo-driver v1.17.3
 	go.uber.org/multierr v1.11.0
 	gopkg.in/resty.v1 v1.12.0

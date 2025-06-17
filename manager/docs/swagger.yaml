@@ -1,0 +1,240 @@
+consumes:
+- application/json
+definitions:
+  model.ErrorOutput:
+    properties:
+      message:
+        type: string
+      path:
+        example: /api/v0/example
+        format: url_path
+        type: string
+      status:
+        maximum: 599
+        minimum: 400
+        type: integer
+      timestamp:
+        type: string
+    required:
+    - message
+    - path
+    - status
+    - timestamp
+    type: object
+  model.HashCrackSubtaskStatusOutput:
+    properties:
+      data:
+        items:
+          type: string
+        minItems: 0
+        type: array
+      percent:
+        maximum: 100
+        minimum: 0
+        type: number
+      status:
+        enum:
+        - PENDING
+        - IN_PROGRESS
+        - SUCCESS
+        - ERROR
+        - UNKNOWN
+        type: string
+    required:
+    - data
+    - percent
+    - status
+    type: object
+  model.HashCrackTaskIDOutput:
+    properties:
+      requestId:
+        type: string
+    required:
+    - requestId
+    type: object
+  model.HashCrackTaskInput:
+    properties:
+      hash:
+        type: string
+      maxLength:
+        maximum: 6
+        minimum: 1
+        type: integer
+    required:
+    - hash
+    - maxLength
+    type: object
+  model.HashCrackTaskStatusOutput:
+    properties:
+      data:
+        items:
+          type: string
+        minItems: 0
+        type: array
+      percent:
+        maximum: 100
+        minimum: 0
+        type: number
+      status:
+        enum:
+        - PENDING
+        - IN_PROGRESS
+        - READY
+        - PARTIAL_READY
+        - ERROR
+        - UNKNOWN
+        type: string
+      subtasks:
+        items:
+          $ref: '#/definitions/model.HashCrackSubtaskStatusOutput'
+        minItems: 0
+        type: array
+    required:
+    - data
+    - percent
+    - status
+    - subtasks
+    type: object
+externalDocs:
+  description: OpenAPI
+  url: https://swagger.io/resources/open-api/
+host: localhost:8080
+info:
+  contact:
+    email: s.petrov1@g.nsu.ru
+    name: Petrov Sergey
+  description: API for Crack Hash Manager
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+  title: Crack Hash Manager API
+  version: 0.0.0
+paths:
+  /health/liveness:
+    get:
+      description: Request for getting health liveness.
+      operationId: healthLiveness
+      responses:
+        "200":
+          description: OK
+      summary: Health liveness
+      tags:
+      - Health API
+  /health/readiness:
+    get:
+      description: Request for getting health readiness. In response will be status
+        of all check (database, cache, message queue).
+      operationId: healthReadiness
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/model.ErrorOutput'
+      summary: Health readiness
+      tags:
+      - Health API
+  /swagger/api-docs.json:
+    get:
+      description: Request for getting swagger specification in JSON
+      operationId: SwaggerJSON
+      produces:
+      - application/json; charset=utf-8
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: Swagger JSON
+      tags:
+      - Swagger API
+  /swagger/index.html:
+    get:
+      description: Request for getting swagger UI
+      operationId: SwaggerUI
+      produces:
+      - text/html; charset=utf-8
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: Swagger UI
+      tags:
+      - Swagger API
+  /v1/hash/crack:
+    post:
+      consumes:
+      - application/json
+      description: Request for create new hash crack task
+      operationId: HashCrack
+      parameters:
+      - description: Hash crack task input
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.HashCrackTaskInput'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/model.HashCrackTaskIDOutput'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorOutput'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorOutput'
+      summary: Create new hash crack task
+      tags:
+      - Hash Crack API
+  /v1/hash/crack/status:
+    get:
+      description: Request for getting status of hash crack task
+      operationId: CheckHashCrackStatus
+      parameters:
+      - description: Hash crack task ID
+        in: query
+        name: requestID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.HashCrackTaskStatusOutput'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorOutput'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorOutput'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorOutput'
+      summary: Get status of hash crack task
+      tags:
+      - Hash Crack API
+produces:
+- application/json
+swagger: "2.0"
+tags:
+- description: API for cracking hashes and checking results
+  name: Hash Crack API
+- description: API for health checks
+  name: Health API
+- description: API for getting swagger specification
+  name: Swagger API

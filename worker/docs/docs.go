@@ -28,7 +28,7 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/api/manager/health/liveness": {
+        "/health/liveness": {
             "get": {
                 "description": "Request for getting health liveness.",
                 "tags": [
@@ -43,7 +43,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/manager/health/readiness": {
+        "/health/readiness": {
             "get": {
                 "description": "Request for getting health readiness. In response will be status of all check (database, cache, message queue).",
                 "produces": [
@@ -62,6 +62,48 @@ const docTemplate = `{
                         "description": "Service Unavailable",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorOutput"
+                        }
+                    }
+                }
+            }
+        },
+        "/swagger/api-docs.json": {
+            "get": {
+                "description": "Request for getting swagger specification in JSON",
+                "produces": [
+                    "application/json; charset=utf-8"
+                ],
+                "tags": [
+                    "Swagger API"
+                ],
+                "summary": "Swagger JSON",
+                "operationId": "SwaggerJSON",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/swagger/index.html": {
+            "get": {
+                "description": "Request for getting swagger UI",
+                "produces": [
+                    "text/html; charset=utf-8"
+                ],
+                "tags": [
+                    "Swagger API"
+                ],
+                "summary": "Swagger UI",
+                "operationId": "SwaggerUI",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
                         }
                     }
                 }

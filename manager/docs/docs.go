@@ -28,7 +28,88 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/api/manager/hash/crack": {
+        "/health/liveness": {
+            "get": {
+                "description": "Request for getting health liveness.",
+                "tags": [
+                    "Health API"
+                ],
+                "summary": "Health liveness",
+                "operationId": "healthLiveness",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/health/readiness": {
+            "get": {
+                "description": "Request for getting health readiness. In response will be status of all check (database, cache, message queue).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Health API"
+                ],
+                "summary": "Health readiness",
+                "operationId": "healthReadiness",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorOutput"
+                        }
+                    }
+                }
+            }
+        },
+        "/swagger/api-docs.json": {
+            "get": {
+                "description": "Request for getting swagger specification in JSON",
+                "produces": [
+                    "application/json; charset=utf-8"
+                ],
+                "tags": [
+                    "Swagger API"
+                ],
+                "summary": "Swagger JSON",
+                "operationId": "SwaggerJSON",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/swagger/index.html": {
+            "get": {
+                "description": "Request for getting swagger UI",
+                "produces": [
+                    "text/html; charset=utf-8"
+                ],
+                "tags": [
+                    "Swagger API"
+                ],
+                "summary": "Swagger UI",
+                "operationId": "SwaggerUI",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/hash/crack": {
             "post": {
                 "description": "Request for create new hash crack task",
                 "consumes": [
@@ -75,7 +156,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/manager/hash/crack/status": {
+        "/v1/hash/crack/status": {
             "get": {
                 "description": "Request for getting status of hash crack task",
                 "produces": [
@@ -122,87 +203,6 @@ const docTemplate = `{
                     }
                 }
             }
-        },
-        "/api/manager/health/liveness": {
-            "get": {
-                "description": "Request for getting health liveness.",
-                "tags": [
-                    "Health API"
-                ],
-                "summary": "Health liveness",
-                "operationId": "healthLiveness",
-                "responses": {
-                    "200": {
-                        "description": "OK"
-                    }
-                }
-            }
-        },
-        "/api/manager/health/readiness": {
-            "get": {
-                "description": "Request for getting health readiness. In response will be status of all check (database, cache, message queue).",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Health API"
-                ],
-                "summary": "Health readiness",
-                "operationId": "healthReadiness",
-                "responses": {
-                    "200": {
-                        "description": "OK"
-                    },
-                    "503": {
-                        "description": "Service Unavailable",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorOutput"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/manager/swagger/api-docs.json": {
-            "get": {
-                "description": "Request for getting swagger specification in JSON",
-                "produces": [
-                    "application/json; charset=utf-8"
-                ],
-                "tags": [
-                    "Swagger API"
-                ],
-                "summary": "Swagger JSON",
-                "operationId": "SwaggerJSON",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/manager/swagger/index.html": {
-            "get": {
-                "description": "Request for getting swagger UI",
-                "produces": [
-                    "text/html; charset=utf-8"
-                ],
-                "tags": [
-                    "Swagger API"
-                ],
-                "summary": "Swagger UI",
-                "operationId": "SwaggerUI",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
         }
     },
     "definitions": {
@@ -230,6 +230,38 @@ const docTemplate = `{
                 },
                 "timestamp": {
                     "type": "string"
+                }
+            }
+        },
+        "model.HashCrackSubtaskStatusOutput": {
+            "type": "object",
+            "required": [
+                "data",
+                "percent",
+                "status"
+            ],
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "minItems": 0,
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "percent": {
+                    "type": "number",
+                    "maximum": 100,
+                    "minimum": 0
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "PENDING",
+                        "IN_PROGRESS",
+                        "SUCCESS",
+                        "ERROR",
+                        "UNKNOWN"
+                    ]
                 }
             }
         },
@@ -266,7 +298,8 @@ const docTemplate = `{
             "required": [
                 "data",
                 "percent",
-                "status"
+                "status",
+                "subtasks"
             ],
             "properties": {
                 "data": {
@@ -284,12 +317,20 @@ const docTemplate = `{
                 "status": {
                     "type": "string",
                     "enum": [
+                        "PENDING",
                         "IN_PROGRESS",
                         "READY",
                         "PARTIAL_READY",
                         "ERROR",
                         "UNKNOWN"
                     ]
+                },
+                "subtasks": {
+                    "type": "array",
+                    "minItems": 0,
+                    "items": {
+                        "$ref": "#/definitions/model.HashCrackSubtaskStatusOutput"
+                    }
                 }
             }
         }

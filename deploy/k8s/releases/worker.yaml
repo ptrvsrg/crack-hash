@@ -1,0 +1,10 @@
+releases:
+  - name: worker
+    chart: nixys/nxs-universal-chart
+    version: { { .StateValues.charts.versions.worker } }
+    namespace: { { .Environment.Name } }
+    values:
+      - envs/default/values/worker.yaml
+      - envs/{{ .Environment.Name }}/values/worker.yaml
+#    secrets:
+#      - envs/{{ .Environment.Name }}/secret.yaml

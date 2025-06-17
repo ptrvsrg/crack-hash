@@ -1,0 +1,10 @@
+releases:
+  - name: rabbitmq
+    chart: bitnami/rabbitmq
+    version: { { .StateValues.charts.versions.rabbitmq } }
+    namespace: { { .Environment.Name } }
+    values:
+      - envs/default/values/rabbitmq.yaml
+      - envs/{{ .Environment.Name }}/values/rabbitmq.yaml
+#    secrets:
+#      - envs/{{ .Environment.Name }}/secret.yaml

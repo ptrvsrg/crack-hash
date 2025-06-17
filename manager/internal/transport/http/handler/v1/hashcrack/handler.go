@@ -32,7 +32,7 @@ func NewHandler(logger zerolog.Logger, svc domain.HashCrackTask) handler.Handler
 func (h *hdlr) RegisterRoutes(r *gin.Engine) {
 	h.logger.Debug().Msg("register routes")
 
-	exAPI := r.Group("/api/manager/hash/crack")
+	exAPI := r.Group("/v1/hash/crack")
 	{
 		exAPI.POST("", h.handleCreateTask)
 		exAPI.GET("/status", h.handleGetTaskStatus)
@@ -51,7 +51,7 @@ func (h *hdlr) RegisterRoutes(r *gin.Engine) {
 //	@Success		202 {object} model.HashCrackTaskIDOutput
 //	@Failure		400 {object} model.ErrorOutput
 //	@Failure		500 {object} model.ErrorOutput
-//	@Router			/api/manager/hash/crack [post]
+//	@Router			/v1/hash/crack [post]
 func (h *hdlr) handleCreateTask(ctx *gin.Context) {
 	h.logger.Debug().Msg("handle create task")
 
@@ -87,7 +87,7 @@ func (h *hdlr) handleCreateTask(ctx *gin.Context) {
 //	@Failure		400 {object} model.ErrorOutput
 //	@Failure		404 {object} model.ErrorOutput
 //	@Failure		500 {object} model.ErrorOutput
-//	@Router			/api/manager/hash/crack/status [get]
+//	@Router			/v1/hash/crack/status [get]
 func (h *hdlr) handleGetTaskStatus(c *gin.Context) {
 	h.logger.Debug().Msg("handle get task status")
 

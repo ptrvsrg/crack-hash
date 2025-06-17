@@ -1,0 +1,148 @@
+image:
+  registry: docker.io
+  repository: bitnami/rabbitmq
+  tag: 4.0.7-debian-12-r1
+  pullPolicy: IfNotPresent
+
+auth:
+  username: admin
+  password: password
+
+extraPlugins: |-
+  rabbitmq_management
+  rabbitmq_peer_discovery_k8s
+  rabbitmq_prometheus
+  rabbitmq_tracing
+
+clustering:
+  enabled: true
+  addressType: hostname
+  forceBoot: true
+  useLongnames: true
+
+loadDefinition:
+  enabled: true
+  existingSecret: load-definition
+  file: /app/definition.json
+
+extraSecrets:
+  load-definition:
+    definition.json: |
+      {
+        "permissions": [
+          {
+            "user": "{{ .Values.auth.username }}",
+            "vhost": "/",
+            "configure": ".*",
+            "write": ".*",
+            "read": ".*"
+          }
+        ],
+        "vhosts": [
+          {
+            "name": "/"
+          }
+        ],
+        "exchanges": [
+          {
+            "name": "exchange.task.started",
+            "vhost": "/",
+            "type": "direct",
+            "durable": true,
+            "auto_delete": false,
+            "internal": false,
+            "arguments": {}
+          },
+          {
+            "name": "exchange.task.result",
+            "vhost": "/",
+            "type": "direct",
+            "durable": true,
+            "auto_delete": false,
+            "internal": false,
+            "arguments": {}
+          }
+        ],
+        "queues": [
+          {
+            "name": "queue.task.started",
+            "vhost": "/",
+            "durable": true,
+            "auto_delete": false,
+            "arguments": {
+              "x-queue-type": "quorum",
+              "x-consumer-timeout": "10000"
+            }
+          },
+          {
+            "name": "queue.task.result",
+            "vhost": "/",
+            "durable": true,
+            "auto_delete": false,
+            "arguments": {
+              "x-queue-type": "quorum",
+              "x-consumer-timeout": "10000"
+            }
+          }
+        ],
+        "bindings": [
+          {
+            "source": "exchange.task.started",
+            "vhost": "/",
+            "destination": "queue.task.started",
+            "destination_type": "queue",
+            "routing_key": "workers",
+            "arguments": {}
+          },
+          {
+            "source": "exchange.task.result",
+            "vhost": "/",
+            "destination": "queue.task.result",
+            "destination_type": "queue",
+            "routing_key": "managers",
+            "arguments": {}
+          }
+        ]
+      }
+  
+
+extraConfiguration: |-
+  load_definitions = /app/definition.json
+  log.console = true
+  log.console.level = debug
+  log.file = true
+  log.file.level = debug
+  log.queue = true
+  log.queue.level = info
+  log.exchange = true
+  log.exchange.level = info
+  queue_index_embed_msgs_below = 4kb
+  vm_memory_high_watermark.relative = 0.6
+  heartbeat = 10
+
+replicaCount: 1
+
+persistence:
+  enabled: true
+  size: 1Gi
+
+resources:
+  requests:
+    cpu: 500m
+    memory: 1Gi
+  limits:
+    cpu: 1
+    memory: 2Gi
+
+service:
+  type: NodePort
+
+headless:
+  enabled: true
+
+metrics:
+  enabled: true
+
+readinessProbe:
+  enabled: true
+  initialDelaySeconds: 60

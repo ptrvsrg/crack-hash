@@ -1,0 +1,10 @@
+releases:
+  - name: manager
+    chart: nixys/nxs-universal-chart
+    version: { { .StateValues.charts.versions.manager } }
+    namespace: { { .Environment.Name } }
+    values:
+      - envs/default/values/manager.yaml
+      - envs/{{ .Environment.Name }}/values/manager.yaml
+#    secrets:
+#      - envs/{{ .Environment.Name }}/secret.yaml

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/ptrvsrg/crack-hash/manager/internal/persistence/repository/mongo/hashcracksubtask"
 	"github.com/ptrvsrg/crack-hash/manager/internal/service/infrastructure/taskwithsubtasks"
+	hashcrackhdlr "github.com/ptrvsrg/crack-hash/manager/internal/transport/http/handler/v1/hashcrack"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -27,7 +28,6 @@ import (
 	"github.com/ptrvsrg/crack-hash/manager/internal/service/domain/health"
 	"github.com/ptrvsrg/crack-hash/manager/internal/service/infrastructure"
 	"github.com/ptrvsrg/crack-hash/manager/internal/service/infrastructure/tasksplit/factory"
-	hashcrackhdlr "github.com/ptrvsrg/crack-hash/manager/internal/transport/http/handler/hashcrack"
 	healthhdlr "github.com/ptrvsrg/crack-hash/manager/internal/transport/http/handler/health"
 	"github.com/ptrvsrg/crack-hash/manager/internal/transport/http/handler/swagger"
 	"github.com/ptrvsrg/crack-hash/manager/pkg/message"

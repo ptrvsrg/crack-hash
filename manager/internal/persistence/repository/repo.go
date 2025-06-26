@@ -3,8 +3,9 @@ package repository
 import (
 	"context"
 	"errors"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"time"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"github.com/ptrvsrg/crack-hash/manager/internal/persistence/entity"
 )
@@ -23,6 +24,8 @@ type Transactor interface {
 type HashCrackTask interface {
 	Transactor
 
+	GetAll(ctx context.Context, limit, offset int, withSubtasks bool) ([]*entity.HashCrackTaskWithSubtasks, error)
+	CountAll(ctx context.Context) (int64, error)
 	GetAllFinished(ctx context.Context, withSubtasks bool) ([]*entity.HashCrackTaskWithSubtasks, error)
 	GetAllExpired(
 		ctx context.Context, maxAge time.Duration, withSubtasks bool,

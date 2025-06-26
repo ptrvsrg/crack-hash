@@ -18,6 +18,7 @@ var (
 
 type HashCrackTask interface {
 	CreateTask(ctx context.Context, input *model.HashCrackTaskInput) (*model.HashCrackTaskIDOutput, error)
+	GetTaskMetadatas(ctx context.Context, limit, offset int) (*model.HashCrackTaskMetadatasOutput, error)
 	GetTaskStatus(ctx context.Context, id string) (*model.HashCrackTaskStatusOutput, error)
 	SaveResultSubtask(ctx context.Context, input *message.HashCrackTaskResult) error
 	ExecutePendingSubtasks(ctx context.Context) error

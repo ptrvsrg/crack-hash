@@ -4,6 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
+	"github.com/rs/zerolog"
+	"github.com/samber/lo"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.uber.org/multierr"
+	"golang.org/x/sync/errgroup"
+
 	"github.com/ptrvsrg/crack-hash/commonlib/bus/amqp/publisher"
 	"github.com/ptrvsrg/crack-hash/manager/config"
 	"github.com/ptrvsrg/crack-hash/manager/internal/persistence/entity"
@@ -12,10 +19,6 @@ import (
 	"github.com/ptrvsrg/crack-hash/manager/internal/service/infrastructure"
 	"github.com/ptrvsrg/crack-hash/manager/pkg/message"
 	"github.com/ptrvsrg/crack-hash/manager/pkg/model"
-	"github.com/rs/zerolog"
-	"github.com/samber/lo"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.uber.org/multierr"
 )
 
 type svc struct {
@@ -90,6 +93,50 @@ func (s *svc) CreateTask(ctx context.Context, input *model.HashCrackTaskInput) (
 	return buildTaskIDOutput(task.ToHashCrackTask()), nil
 }
 
+func (s *svc) GetTaskMetadatas(
+	ctx context.Context, limit,
+	offset int,
+) (*model.HashCrackTaskMetadatasOutput, error) {
+	s.logger.Info().Int("limit", limit).Int("offset", offset).Msg("get task metadatas")
+
+	// Get tasks and count
+	var (
+		tasks []*entity.HashCrackTaskWithSubtasks
+		count int64
+	)
+	group, ctx := errgroup.WithContext(ctx)
+
+	group.Go(
+		func() error {
+			var err error
+			tasks, err = s.taskRepo.GetAll(ctx, limit, offset, false)
+			if err != nil {
+				return fmt.Errorf("failed to get tasks: %w", err)
+			}
+			return nil
+		},
+	)
+
+	group.Go(
+		func() error {
+			var err error
+			count, err = s.taskRepo.CountAll(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to count tasks: %w", err)
+			}
+			return nil
+		},
+	)
+
+	if err := group.Wait(); err != nil {
+		s.logger.Error().Err(err).Stack().Msg("failed to get tasks and count")
+		return nil, fmt.Errorf("failed to get tasks and count: %w", err)
+	}
+
+	// Convert task metadatas
+	return buildTaskMetadataOutputs(count, tasks), nil
+}
+
 func (s *svc) GetTaskStatus(ctx context.Context, id string) (*model.HashCrackTaskStatusOutput, error) {
 	s.logger.Info().Str("id", id).Msg("get task status")
 
@@ -129,78 +176,80 @@ func (s *svc) SaveResultSubtask(ctx context.Context, input *message.HashCrackTas
 	}
 
 	// Update subtask and check if task is finished
-	_, err = s.taskRepo.WithTransaction(ctx, func(ctx context.Context) (any, error) {
-		// Get task
-		taskWithSubtasks, err := s.taskRepo.Get(ctx, objID, true)
-		if err != nil {
-			s.logger.Error().Err(err).Stack().Msg("failed to get task")
+	_, err = s.taskRepo.WithTransaction(
+		ctx, func(ctx context.Context) (any, error) {
+			// Get task
+			taskWithSubtasks, err := s.taskRepo.Get(ctx, objID, true)
+			if err != nil {
+				s.logger.Error().Err(err).Stack().Msg("failed to get task")
 
-			if errors.Is(err, repository.ErrCrackTaskNotFound) {
-				return nil, domain.ErrTaskNotFound
+				if errors.Is(err, repository.ErrCrackTaskNotFound) {
+					return nil, domain.ErrTaskNotFound
+				}
+
+				return nil, fmt.Errorf("failed to get task: %w", err)
 			}
 
-			return nil, fmt.Errorf("failed to get task: %w", err)
-		}
-
-		// Check if task is finished by timeout
-		if taskWithSubtasks.Reason != nil && *taskWithSubtasks.Reason == domain.ErrTaskFinishedByTimeout.Error() {
-			s.logger.Error().Err(domain.ErrTaskFinishedByTimeout).Msg("task finished by timeout")
-			return nil, domain.ErrTaskFinishedByTimeout
-		}
-
-		// Get subtask
-		var (
-			subtaskIdx int
-			ok         = false
-		)
-		for i, st := range taskWithSubtasks.Subtasks {
-			if st.PartNumber == input.PartNumber {
-				subtaskIdx = i
-				ok = true
-				break
-			}
-		}
-		if !ok {
-			s.logger.Error().Msg("subtask not found")
-			return nil, domain.ErrSubtaskNotFound
-		}
-
-		// Update subtask
-		partialUpdateSubtaskEntity(taskWithSubtasks.Subtasks[subtaskIdx], input)
-		if err := s.subtaskRepo.Update(ctx, taskWithSubtasks.Subtasks[subtaskIdx]); err != nil {
-			s.logger.Error().Err(err).Stack().Msg("failed to update task")
-			return nil, fmt.Errorf("failed to update task: %w", err)
-		}
-
-		// Check if task is finished
-		s.logger.Debug().Msg("check if task is finished")
-
-		task := taskWithSubtasks.ToHashCrackTask()
-		hasSuccess, hasError, hasInProgress, hasPending := hasSubtaskStatuses(taskWithSubtasks)
-		if !hasInProgress && !hasPending {
-			switch {
-			case hasError && hasSuccess:
-				s.logger.Info().Msg("mark task as PARTIAL_READY")
-				markTaskAsPartialReady(task)
-			case hasError:
-				s.logger.Info().Msg("mark task as ERROR")
-				markTaskAsError(task, taskWithSubtasks.Subtasks)
-			case hasSuccess:
-				s.logger.Info().Msg("mark task as READY")
-				markTaskAsReady(task)
+			// Check if task is finished by timeout
+			if taskWithSubtasks.Reason != nil && *taskWithSubtasks.Reason == domain.ErrTaskFinishedByTimeout.Error() {
+				s.logger.Error().Err(domain.ErrTaskFinishedByTimeout).Msg("task finished by timeout")
+				return nil, domain.ErrTaskFinishedByTimeout
 			}
 
-			// Update task
-			if err := s.taskRepo.Update(ctx, task); err != nil {
+			// Get subtask
+			var (
+				subtaskIdx int
+				ok         = false
+			)
+			for i, st := range taskWithSubtasks.Subtasks {
+				if st.PartNumber == input.PartNumber {
+					subtaskIdx = i
+					ok = true
+					break
+				}
+			}
+			if !ok {
+				s.logger.Error().Msg("subtask not found")
+				return nil, domain.ErrSubtaskNotFound
+			}
+
+			// Update subtask
+			partialUpdateSubtaskEntity(taskWithSubtasks.Subtasks[subtaskIdx], input)
+			if err := s.subtaskRepo.Update(ctx, taskWithSubtasks.Subtasks[subtaskIdx]); err != nil {
 				s.logger.Error().Err(err).Stack().Msg("failed to update task")
 				return nil, fmt.Errorf("failed to update task: %w", err)
 			}
 
-			s.logger.Info().Msg("task is finished")
-		}
+			// Check if task is finished
+			s.logger.Debug().Msg("check if task is finished")
 
-		return nil, nil
-	})
+			task := taskWithSubtasks.ToHashCrackTask()
+			hasSuccess, hasError, hasInProgress, hasPending := hasSubtaskStatuses(taskWithSubtasks)
+			if !hasInProgress && !hasPending {
+				switch {
+				case hasError && hasSuccess:
+					s.logger.Info().Msg("mark task as PARTIAL_READY")
+					markTaskAsPartialReady(task)
+				case hasError:
+					s.logger.Info().Msg("mark task as ERROR")
+					markTaskAsError(task, taskWithSubtasks.Subtasks)
+				case hasSuccess:
+					s.logger.Info().Msg("mark task as READY")
+					markTaskAsReady(task)
+				}
+
+				// Update task
+				if err := s.taskRepo.Update(ctx, task); err != nil {
+					s.logger.Error().Err(err).Stack().Msg("failed to update task")
+					return nil, fmt.Errorf("failed to update task: %w", err)
+				}
+
+				s.logger.Info().Msg("task is finished")
+			}
+
+			return nil, nil
+		},
+	)
 	if err != nil {
 		s.logger.Error().Err(err).Stack().Msg("failed to update subtask and check if task is finished")
 		return fmt.Errorf("failed to update subtask and check if task is finished: %w", err)
@@ -367,9 +416,11 @@ func (s *svc) startExecuteTask(ctx context.Context, taskWithSubtasks *entity.Has
 func (s *svc) startExecuteSubtasks(
 	ctx context.Context, task *entity.HashCrackTask, subtasks []*entity.HashCrackSubtask,
 ) error {
-	subtaskIds := lo.Map(subtasks, func(subtask *entity.HashCrackSubtask, _ int) string {
-		return subtask.ObjectID.Hex()
-	})
+	subtaskIds := lo.Map(
+		subtasks, func(subtask *entity.HashCrackSubtask, _ int) string {
+			return subtask.ObjectID.Hex()
+		},
+	)
 
 	s.logger.Debug().
 		Str("id", task.ObjectID.Hex()).

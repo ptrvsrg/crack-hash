@@ -2,14 +2,16 @@ package hashcrack
 
 import (
 	"fmt"
-	"github.com/ptrvsrg/crack-hash/manager/internal/persistence/entity"
-	"github.com/ptrvsrg/crack-hash/manager/pkg/message"
-	"github.com/ptrvsrg/crack-hash/manager/pkg/model"
-	"github.com/samber/lo"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"math"
 	"strings"
 	"time"
+
+	"github.com/samber/lo"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+
+	"github.com/ptrvsrg/crack-hash/manager/internal/persistence/entity"
+	"github.com/ptrvsrg/crack-hash/manager/pkg/message"
+	"github.com/ptrvsrg/crack-hash/manager/pkg/model"
 )
 
 func hasSubtaskStatuses(task *entity.HashCrackTaskWithSubtasks) (bool, bool, bool, bool) {
@@ -158,6 +160,30 @@ func buildTaskStatusOutput(task *entity.HashCrackTaskWithSubtasks) *model.HashCr
 		Data:     allData,
 		Percent:  math.Min(100.0, averagePercent),
 		Subtasks: subtaskOutputs,
+	}
+}
+
+func buildTaskMetadataOutput(task *entity.HashCrackTaskWithSubtasks) *model.HashCrackTaskMetadataOutput {
+	return &model.HashCrackTaskMetadataOutput{
+		RequestID: task.ObjectID.Hex(),
+		Hash:      task.Hash,
+		MaxLength: task.MaxLength,
+		CreatedAt: task.CreatedAt,
+	}
+}
+
+func buildTaskMetadataOutputs(
+	count int64, tasks []*entity.HashCrackTaskWithSubtasks,
+) *model.HashCrackTaskMetadatasOutput {
+
+	data := make([]*model.HashCrackTaskMetadataOutput, len(tasks))
+	for i, task := range tasks {
+		data[i] = buildTaskMetadataOutput(task)
+	}
+
+	return &model.HashCrackTaskMetadatasOutput{
+		Count: count,
+		Tasks: data,
 	}
 }
 

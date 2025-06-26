@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        service: [ { name: manager, context: . }, { name: manager, context: . }, { name: web, context: ./web } ]
+        service: [ { name: manager, context: . }, { name: worker, context: . }, { name: web, context: ./web } ]
     steps:
       - name: Checkout code
         uses: actions/checkout@v3

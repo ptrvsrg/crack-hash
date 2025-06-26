@@ -46,6 +46,11 @@ jobs:
         with:
           name: dependencies
           path: web/node_modules
+      - name: Install dependencies
+        uses: borales/actions-yarn@v4
+        with:
+          cmd: global add eslint oxlint vue-tsc
+          dir: web
       - name: Eslint
         uses: borales/actions-yarn@v4
         with:

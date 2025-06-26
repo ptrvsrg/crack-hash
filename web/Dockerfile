@@ -7,7 +7,7 @@ WORKDIR /app
 
 COPY package.json yarn.lock ./
 
-RUN yarn install --frozen-lockfile
+RUN yarn install --frozen-lockfile --network-timeout=300000
 
 
 FROM deps AS builder

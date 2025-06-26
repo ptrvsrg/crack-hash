@@ -23,7 +23,7 @@ jobs:
       - name: Install dependencies
         uses: borales/actions-yarn@v4
         with:
-          cmd: install --frozen-lockfile
+          cmd: install --frozen-lockfile --network-timeout=300000
           dir: web
       - name: Upload dependencies
         uses: actions/upload-artifact@v4
@@ -44,7 +44,7 @@ jobs:
       - name: Install dependencies
         uses: borales/actions-yarn@v4
         with:
-          cmd: install --frozen-lockfile
+          cmd: install --frozen-lockfile --network-timeout=300000
           dir: web
       - name: ESLint
         uses: borales/actions-yarn@v4
@@ -70,7 +70,7 @@ jobs:
       - name: Install dependencies
         uses: borales/actions-yarn@v4
         with:
-          cmd: install --frozen-lockfile
+          cmd: install --frozen-lockfile --network-timeout=300000
           dir: web
       - name: Build
         uses: borales/actions-yarn@v4

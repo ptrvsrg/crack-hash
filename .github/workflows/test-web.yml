@@ -24,14 +24,17 @@ jobs:
         uses: borales/actions-yarn@v4
         with:
           cmd: lint:eslint
+          dir: web
       - name: Oxlint
         uses: borales/actions-yarn@v4
         with:
           cmd: lint:oxlint
+          dir: web
       - name: Typecheck
         uses: borales/actions-yarn@v4
         with:
           cmd: type-check
+          dir: web
   build:
     runs-on: ubuntu-latest
     steps:
@@ -50,7 +53,7 @@ jobs:
           cmd: build
           dir: web
       - name: Upload build
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: build
           path: web/dist

@@ -27,8 +27,9 @@ run:
 swagger:
 	@echo "Generating swagger..."
 	@go install github.com/swaggo/swag/cmd/swag@latest
-	@swag init --parseDependency --generalInfo ./internal/transport/http/router.go --outputTypes go --output ./docs
+	@swag init --parseDependency --generalInfo ./internal/transport/http/router.go --outputTypes go,yaml --output ./docs
 	sed -i '' 's/github_com_ptrvsrg_crack-hash_manager_pkg_//g' ./docs/docs.go
+	sed -i '' 's/github_com_ptrvsrg_crack-hash_manager_pkg_//g' ./docs/swagger.yaml
 
 # Generate mocks
 mock:

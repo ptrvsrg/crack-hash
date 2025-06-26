@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { NButton, NIcon } from 'naive-ui'
+import { NButton, NIcon, useThemeVars } from 'naive-ui'
 import { Github } from '@vicons/fa'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
+const themeVars = useThemeVars()
 
 const onClick = () => {
   window.open('https://github.com/ptrvsrg/crack-hash', '_blank')
@@ -13,7 +12,7 @@ const onClick = () => {
 <template>
   <n-button circle quaternary @click="onClick">
     <template #icon>
-      <n-icon size="28" color="#000">
+      <n-icon size="28" :color="themeVars.textColorBase">
         <Github />
       </n-icon>
     </template>

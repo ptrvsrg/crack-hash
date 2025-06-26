@@ -1,31 +1,27 @@
-import { createI18n } from 'vue-i18n'
-import en from '@/assets/locales/en.json'
-import ru from '@/assets/locales/ru.json'
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
+import i18n from '@/i18n'
 
-export const i18n = createI18n({
-  legacy: false,
-  locale: getLocaleInStorage(),
-  fallbackLocale: 'en',
-  messages: { en, ru },
-})
+type SupportedLocale = 'en' | 'ru'
 
 export const useLocaleStore = defineStore(
   'locale',
   () => {
-    const theme = ref('en')
+    const locale = ref<SupportedLocale>('en')
 
-    function getSupportedLocales(): string[] {
+    function getSupportedLocales(): SupportedLocale[] {
       return ['en', 'ru']
     }
 
-    function changeLocale(locale: string): void {
-      i18n.global.locale.value = locale
-      localStorage.setItem(localeKey, locale)
+    function changeLocale(newLocale: SupportedLocale) {
+      locale.value = newLocale
     }
 
-    return { theme, changeTheme }
+    watch(locale, (newLocale: SupportedLocale) => {
+      i18n.global.locale.value = newLocale
+    })
+
+    return { locale, changeLocale, getSupportedLocales }
   },
   {
     persist: {},

@@ -1,5 +1,6 @@
-import { type HashCrackTaskStatus } from '@/model/hash-crack.ts'
+import type { HashCrackTaskStatus } from '@/model/hash-crack.ts'
 
-export type TaskStatusProps = {
+export type TaskProgressProps = {
+  percent: number
   status: HashCrackTaskStatus
 }

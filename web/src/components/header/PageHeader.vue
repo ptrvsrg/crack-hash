@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { NPageHeader, NAvatar, NH2 } from 'naive-ui'
 import logo from '@/assets/logo.svg'
-import LanguageSwitcher from '@/components/common/header/components/LanguageSwitcher.vue'
-import GithubButton from '@/components/common/header/components/GithubButton.vue'
-import ThemeSwitcher from '@/components/common/header/components/ThemeSwitcher.vue'
+import LanguageSwitcher from '@/components/header/components/LanguageSwitcher.vue'
+import GithubButton from '@/components/header/components/GithubButton.vue'
+import ThemeSwitcher from '@/components/header/components/ThemeSwitcher.vue'
 </script>
 
 <template>

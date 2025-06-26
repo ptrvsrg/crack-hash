@@ -1,11 +1,14 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'vitest'
 
-import { mount } from '@vue/test-utils';
-import HelloWorld from '../HelloWorld.vue';
+import { mount } from '@vue/test-utils'
+import PageHeader from '@/components/header/PageHeader.vue'
 
-describe('HelloWorld', () => {
+describe('PageHeader', () => {
   it('renders properly', () => {
-    const wrapper = mount(HelloWorld, { props: { msg: 'Hello Vitest' } });
-    expect(wrapper.text()).toContain('Hello Vitest');
-  });
-});
+    const wrapper = mount(PageHeader)
+
+    expect(wrapper.exists()).toBe(true)
+    expect(wrapper.isVisible()).toBe(true)
+    expect(wrapper.text()).toContain('Crack HASH')
+  })
+})

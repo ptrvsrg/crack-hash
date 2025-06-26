@@ -1,11 +1,9 @@
 <script setup lang="ts">
-
+import { NLoadingBarProvider } from 'naive-ui'
 </script>
 
 <template>
-  $END$
+  <n-loading-bar-provider>
+    <slot />
+  </n-loading-bar-provider>
 </template>
-
-<style scoped>
-
-</style>

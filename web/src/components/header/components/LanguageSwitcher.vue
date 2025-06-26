@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { NDropdown, NIcon, NButton } from 'naive-ui'
+import { NDropdown, NIcon, NButton, useThemeVars } from 'naive-ui'
 import { LanguageOutlined } from '@vicons/material'
 import { useLocaleStore } from '@/stores/locale/locale.ts'
-import { i18n } from '@/i18n.ts'
+import i18n from '@/i18n'
 
+const themeVars = useThemeVars()
 const { getSupportedLocales, changeLocale } = useLocaleStore()
 
 const options = getSupportedLocales().map((locale) => {
@@ -20,7 +21,7 @@ const handleSelect = changeLocale
   <n-dropdown trigger="click" :options="options" @select="handleSelect">
     <n-button circle quaternary>
       <template #icon>
-        <n-icon size="30" color="#000">
+        <n-icon size="30" :color="themeVars.textColorBase">
           <LanguageOutlined />
         </n-icon>
       </template>

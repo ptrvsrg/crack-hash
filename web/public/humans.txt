@@ -1,0 +1,7 @@
+/* TEAM */
+Developer: Sergey Petrov
+Contact: s.petrov1@g.nsu.ru
+From: Earth
+
+/* TECHNOLOGY */
+Framework: Vue.js 3

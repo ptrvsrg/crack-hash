@@ -1,93 +1,97 @@
 <script setup lang="ts">
-import {
-  NH1,
-  NInput,
-  NInputNumber,
-  NButton,
-  NForm,
-  NFormItem,
-  useMessage,
-  type FormInst
-} from 'naive-ui'
+import { NH1, NText, NPopover, useLoadingBar, useMessage } from 'naive-ui'
+import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
-import { ref } from 'vue'
 import { useRequest } from '@/hooks/useRequest.ts'
-import { createHashCrackTask } from '@/api/manager/hash-crack-api.ts'
-import type { HashCrackTaskInput, HashCrackTaskIDOutput } from '@/model/hash-crack.ts'
-import type { FormRules } from 'naive-ui/es/form/src/interface'
+import { getHashCrackTaskStatus } from '@/api/manager/hash-crack-api.ts'
+import NotFound from '@/components/not-found/NotFound.vue'
+import TaskInfo from '@/views/task/task-info/TaskInfo.vue'
+import { onBeforeUnmount, onMounted, watch } from 'vue'
+import { usePooling } from '@/hooks/usePooling.ts'
+import { HashCrackTaskStatus } from '@/model/hash-crack.ts'
+import PageSpinner from '@/components/spinner/PageSpinner.vue'
+import axios from 'axios';
 
-const message = useMessage()
-const { push } = useRouter()
-const { t } = useI18n()
 const {
-  data,
-  loading,
-  error,
-  fetch
-} = useRequest<HashCrackTaskIDOutput>(() => createHashCrackTask(formValue.value))
+  params: { id: taskId },
+} = useRoute()
+const loadingBar = useLoadingBar()
+const message = useMessage()
+const { t } = useI18n()
+const { apiCall, data, loading, error } = useRequest(async () => getHashCrackTaskStatus({ requestID: taskId as string }))
 
-const formRef = ref<FormInst | null>(null)
-const formValue = ref<HashCrackTaskInput>({
-  hash: '',
-  maxLength: 1
+const { pooling } = usePooling(() => {
+  apiCall().then(() => {
+    // check error
+    if (error.value) {
+      console.error('API call error:', error.value)
+      message.error(error.value.message)
+      pooling.value = false
+      return
+    }
+
+    // check status
+    if (data.value?.status !== HashCrackTaskStatus.IN_PROGRESS && data.value?.status !== HashCrackTaskStatus.PENDING) {
+      pooling.value = false
+    }
+  })
+}, 30000)
+
+onMounted(() => {
+  apiCall().then(() => {
+    if (error.value) {
+      console.error('API call error:', error.value)
+      message.error(error.value.message)
+    }
+  })
 })
-const rules: FormRules = {
-  hash: {
-    type: 'string',
-    required: true,
-    message: t('errorRequiredHash'),
-    trigger: 'blur'
-  },
-  maxLength: {
-    type: 'number',
-    required: true,
-    message: t('errorRequiredMaxLength'),
-    trigger: 'blur'
+
+onBeforeUnmount(() => {
+  pooling.value = false
+})
+
+watch(loading, () => {
+  if (loading.value) {
+    loadingBar.start()
+  } else {
+    loadingBar.finish()
   }
-}
-
-const handleClick = async (e: MouseEvent) => {
-  e.preventDefault()
-
-  try {
-    await formRef.value?.validate()
-  } catch (error) {
-    // Обработка не требуется, потому что у FormItem появятся сообщения об ошибках
-    console.error(`Validation error:`, error)
-    return
-  }
-
-  await fetch()
-
-  if (error.value) {
-    console.error('API call error:', error.value)
-    message.error(error.value.message)
-    return
-  }
-
-  if (data.value) {
-    await push({
-      path: `/task/${data.value.requestId}`
-    })
-  }
-}
+})
 </script>
 
 <template>
-  <main>
-    <n-h1>{{ t('enterData') }}</n-h1>
-    <n-form ref="formRef" :model="formValue" :rules="rules">
-      <n-form-item class="hash-form-item" :label="t('labelHash')" path="hash">
-        <n-input v-model:value="formValue.hash" :placeholder="t('enterHash')" />
-      </n-form-item>
-      <n-form-item class="max-length-form-item" :label="t('labelMaxLength')" path="maxLength">
-        <n-input-number v-model:value="formValue.maxLength" :placeholder="t('enterMaxLength')" min="1" />
-      </n-form-item>
-      <n-form-item>
-        <n-button type="info" :loading="loading" @click="handleClick">{{ t('startBruteForce') }} </n-button>
-      </n-form-item>
-    </n-form>
+  <main v-if="loading">
+    <PageSpinner />
+  </main>
+  <main v-else-if="error">
+    <NotFound
+      v-if="axios.isAxiosError(error) && error.response?.status === 404"
+      :title="t('taskNotFound', { id: taskId })"
+      :description="t('taskNotFoundDescription')"
+    />
+    <NotFound
+      v-else
+      :title="t('taskError', { id: taskId })"
+      :description="t('taskErrorDescription', { error: error.message })"
+    />
+  </main>
+  <main v-else-if="!data">
+    <NotFound
+      :title="t('taskNotFound', { id: taskId })"
+      :description="t('taskNotFoundDescription')"
+    />
+  </main>
+  <main v-else>
+    <n-h1 class="title">
+      <n-text class="task-title-text">{{ t('task') }}</n-text>
+      <n-popover trigger="hover" :delay="500" :duration="500">
+        <template #trigger>
+          <n-text italic code class="code task-id-text">{{ taskId }}</n-text>
+        </template>
+        <span>{{ taskId }}</span>
+      </n-popover>
+    </n-h1>
+    <TaskInfo :task="data" />
   </main>
 </template>
 
@@ -97,34 +101,28 @@ main {
   flex-direction: column;
   justify-content: flex-start;
   align-items: center;
-  height: fit-content;
+  height: 100%;
   width: 100%;
   padding: 20px;
   box-sizing: border-box;
 }
 
-.n-form {
-  display: inline-flex;
-  gap: 10px;
+.title {
+  display: flex;
+  align-items: center;
   justify-content: center;
-  align-items: flex-start;
-  width: 800px;
-  box-sizing: border-box;
-}
-
-.n-form-item {
-  margin: 0;
-}
-
-.hash-form-item {
   width: 100%;
+  white-space: nowrap;
 }
 
-.max-length-form-item {
-  width: fit-content;
+.task-title-text {
+  flex-shrink: 0;
 }
 
-.n-form-item.n-form-item--top-labelled {
-  grid-template-columns: none;
+.task-id-text {
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  margin-left: 8px;
 }
 </style>

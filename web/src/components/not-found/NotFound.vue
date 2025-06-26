@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { NResult, NButton } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
-import type { NotFoundProps } from '@/components/common/not-found/properties.ts'
+import type { NotFoundProps } from '@/components/not-found/props.ts'
 import { useRouter } from 'vue-router'
 
 const { push } = useRouter()

@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { NButton, NIcon, NDropdown } from 'naive-ui'
+import { NButton, NIcon, NDropdown, useThemeVars } from 'naive-ui'
 import { DarkTheme20Filled } from '@vicons/fluent'
 import { useI18n } from 'vue-i18n'
 import { useThemeStore } from '@/stores/theme/theme.ts'
 
 const { changeTheme } = useThemeStore()
-
 const { t } = useI18n()
+const themeVars = useThemeVars()
 
 const options = [
   {
@@ -26,7 +26,7 @@ const handleSelect = changeTheme
   <n-dropdown trigger="click" :options="options" @select="handleSelect">
     <n-button circle quaternary>
       <template #icon>
-        <n-icon size="30" color="#000">
+        <n-icon size="30" :color="themeVars.textColorBase">
           <DarkTheme20Filled />
         </n-icon>
       </template>

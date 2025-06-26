@@ -3,10 +3,9 @@ import type { TaskStatusProps } from '@/views/task/task-info/task-result/props.t
 import { NDescriptions, NDescriptionsItem, NH3, NTag, NText } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
 
-const { task } = defineProps<TaskStatusProps>()
+const { data } = defineProps<TaskStatusProps>()
 
 const { t } = useI18n()
-
 </script>
 
 <template>
@@ -14,16 +13,14 @@ const { t } = useI18n()
     <n-descriptions-item>
       <template #label>
         <n-h3 class="inline-text margin-right">
-          <n-text>
-            {{ t('wordsFound') }}:
-          </n-text>
+          <n-text> {{ t('wordsFound') }}: </n-text>
         </n-h3>
       </template>
       <div class="found-word-list">
-        <n-tag v-for="result in task.data" :key="result" type="success" round :bordered="false">
+        <n-tag v-for="result in data" :key="result" type="success" round :bordered="false">
           {{ result }}
         </n-tag>
-        <n-text class="secondary-text" v-if="task.data.length === 0" italic>
+        <n-text class="secondary-text" v-if="data.length === 0" italic>
           {{ t('wordsNotFound') }}
         </n-text>
       </div>

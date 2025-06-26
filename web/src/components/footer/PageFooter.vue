@@ -3,9 +3,7 @@ const year = new Date().getFullYear()
 </script>
 
 <template>
-  <footer>
-    © {{year}} ptrvsrg
-  </footer>
+  <footer> © {{ year }} ptrvsrg </footer>
 </template>
 
 <style scoped>

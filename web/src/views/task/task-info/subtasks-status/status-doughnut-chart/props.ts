@@ -1,5 +1,5 @@
-import type { HashCrackSubtaskStatusOutput } from '@/model/hash-crack.ts'
+import { HashCrackSubtaskStatus } from '@/model/hash-crack.ts'
 
-export type SubtaskStatusProps = {
-  subtasks: HashCrackSubtaskStatusOutput[]
+export type StatusDoughnutChartProps = {
+  subtaskStatuses: HashCrackSubtaskStatus[]
 }

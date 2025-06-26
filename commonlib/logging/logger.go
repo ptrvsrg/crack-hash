@@ -40,5 +40,5 @@ func Setup(isDev bool) {
 type gidHook struct{}
 
 func (h gidHook) Run(e *zerolog.Event, _ zerolog.Level, _ string) {
-	e.Int64("gid", routine.Goid())
+	e.Uint64("gid", routine.Goid())
 }

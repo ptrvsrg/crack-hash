@@ -5,14 +5,15 @@ import (
 	"net/http"
 	"sort"
 
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
 
 	"github.com/ptrvsrg/crack-hash/commonlib/http/middleware"
+	"github.com/ptrvsrg/crack-hash/manager/config"
 	"github.com/ptrvsrg/crack-hash/manager/docs"
 	"github.com/ptrvsrg/crack-hash/manager/internal/di"
 	"github.com/ptrvsrg/crack-hash/manager/internal/version"
-
-	"github.com/gin-gonic/gin"
 )
 
 var (
@@ -57,6 +58,7 @@ func SetupRouter(c *di.Container) http.Handler {
 	// Setup middlewares
 	log.Info().Msg("setup middlewares")
 
+	r.Use(middleware.CorsMiddleware(convertCorsConfig(c.Config.Server.Cors)))
 	r.Use(middleware.LoggerMiddleware(ignorePathRegexps...))
 	r.Use(middleware.RecoveryMiddleware())
 	r.Use(middleware.ErrorMiddleware())
@@ -98,4 +100,14 @@ func handleNoRoute(ctx *gin.Context) {
 
 	ctx.Status(http.StatusNotFound)
 	_ = ctx.Error(ErrRouteNotFound)
+}
+
+func convertCorsConfig(cfg config.CorsConfig) cors.Config {
+	return cors.Config{
+		AllowOrigins:     cfg.AllowedOrigins,
+		AllowMethods:     cfg.AllowedMethods,
+		AllowHeaders:     cfg.AllowedHeaders,
+		AllowCredentials: cfg.AllowCredentials,
+		MaxAge:           cfg.MaxAge,
+	}
 }

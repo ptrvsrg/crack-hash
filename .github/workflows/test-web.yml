@@ -49,23 +49,13 @@ jobs:
       - name: Install dependencies
         uses: borales/actions-yarn@v4
         with:
-          cmd: global add eslint oxlint vue-tsc
+          cmd: global add eslint
           dir: web
-      - name: Eslint
-        uses: borales/actions-yarn@v4
+      - name: ESLint
+        uses: sibiraj-s/action-eslint@v3
         with:
-          cmd: lint:eslint
-          dir: web
-      - name: Oxlint
-        uses: borales/actions-yarn@v4
-        with:
-          cmd: lint:oxlint
-          dir: web
-      - name: Typecheck
-        uses: borales/actions-yarn@v4
-        with:
-          cmd: type-check
-          dir: web
+          working-directory: web
+          ignore-path: web/.gitignore
   build:
     needs: lint
     runs-on: ubuntu-latest

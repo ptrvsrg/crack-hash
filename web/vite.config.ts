@@ -3,7 +3,7 @@ import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
 import { fileURLToPath, URL } from 'node:url'
 
-export default defineConfig(({ mode, command }) => {
+export default defineConfig(({ _, command }) => {
   const config: UserConfig = {
     build: {
       target: 'esnext',

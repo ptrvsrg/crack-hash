@@ -1,15 +1,31 @@
-FROM golang:1.24.2-alpine3.21 AS deps
+ARG GOLANG_VERSION=1.24.2-alpine3.21
+ARG ALPINE_VERSION=3.21
+
+FROM golang:${GOLANG_VERSION} AS deps
 
 WORKDIR /app
+
+ARG REGISTRY_HOST
+ARG REGISTRY_USER
+ARG REGISTRY_PASSWORD
 
 COPY ./commonlib ./commonlib
 COPY ./manager ./manager
 COPY ./worker ./worker
+COPY ./worker/.netrc.tmpl /root
 
 WORKDIR /app/worker
 
-ENV GO111MODULE=on
+ENV CGO_ENABLED=0 \
+    GO111MODULE=on \
+    GOPRIVATE=github.com/*
 
+RUN apk --no-cache update \
+    && apk add --no-cache --upgrade \
+        gcc \
+        git \
+        musl-dev \
+        sed
 RUN go generate ./...
 RUN go mod download
 
@@ -30,7 +46,7 @@ RUN go build \
     	-X github.com/ptrvsrg/crack-hash/worker/internal/version.Platform=$(go env GOOS)/$(go env GOARCH)" \
     ./cmd/cli
 
-FROM alpine:3.21 AS runtime
+FROM alpine:${ALPINE_VERSION} AS runtime
 
 WORKDIR /app
 
@@ -38,14 +54,19 @@ COPY --from=build /app/worker/bin /app
 COPY --from=build /app/worker/config/config.default.yaml config/config.yaml
 
 RUN apk update \
-    && apk add --no-cache ca-certificates tzdata \
+    && apk add --no-cache --upgrade \
+        bash \
+        ca-certificates \
+        curl \
+        tzdata \
+    && update-ca-certificates \
     && echo 'Etc/UTC' > /etc/timezone \
     && adduser --disabled-password --home /app --gecos '' gouser \
     && chown -R gouser /app
 
-ENV TZ=Etc/UTC
-ENV LANG=en_US.utf8
-ENV LC_ALL=en_US.UTF-8
+ENV TZ     :/etc/localtime
+ENV LANG   en_US.utf8
+ENV LC_ALL en_US.UTF-8
 
 USER gouser
 

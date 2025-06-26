@@ -22,6 +22,7 @@ import (
 	"github.com/ptrvsrg/crack-hash/worker/internal/service/infrastructure"
 	"github.com/ptrvsrg/crack-hash/worker/internal/service/infrastructure/bruteforce/factory"
 	healthhdlr "github.com/ptrvsrg/crack-hash/worker/internal/transport/http/handler/health"
+	swaggerhdlr "github.com/ptrvsrg/crack-hash/worker/internal/transport/http/handler/swagger"
 )
 
 type Providers struct {
@@ -156,6 +157,7 @@ func (c *Container) setupHandlers(_ context.Context) {
 
 	c.Handlers = []handler.Handler{
 		healthhdlr.NewHandler(c.Logger, c.DomainSVCs.Health),
+		swaggerhdlr.NewHandler(c.Logger),
 	}
 }
 

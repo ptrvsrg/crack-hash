@@ -1,5 +1,10 @@
 package http
 
+//go:generate go install github.com/swaggo/swag/cmd/swag@v1.16.4
+//go:generate swag init --parseDependency --generalInfo ./router.go --outputTypes go,yaml --output ../../../docs
+//go:generate sed -i'' "s/github_com_ptrvsrg_crack-hash_worker_pkg_//g" ../../../docs/docs.go
+//go:generate sed -i'' "s/github_com_ptrvsrg_crack-hash_worker_pkg_//g" ../../../docs/swagger.yaml
+
 import (
 	"errors"
 	"net/http"

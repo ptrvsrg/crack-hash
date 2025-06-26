@@ -3,7 +3,7 @@ import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
 import { fileURLToPath, URL } from 'node:url'
 
-export default defineConfig(({ _, command }) => {
+export default defineConfig(({ mode, command }) => {
   const config: UserConfig = {
     build: {
       target: 'esnext',
@@ -23,7 +23,7 @@ export default defineConfig(({ _, command }) => {
     },
     server: {
       watch: {
-        useFsEvents: true,
+        useFsEvents: mode === 'development',
       },
       warmup: {
         clientFiles: ['./src/**/*.vue', './src/**/*.ts', './src/**/*.css', './src/**/*.svg'],

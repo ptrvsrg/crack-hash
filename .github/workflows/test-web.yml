@@ -51,6 +51,11 @@ jobs:
         with:
           cmd: lint:eslint
           dir: web
+      - name: OXLint
+        uses: borales/actions-yarn@v4
+        with:
+          cmd: lint:oxlint
+          dir: web
   build:
     needs: lint
     runs-on: ubuntu-latest

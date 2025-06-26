@@ -104,10 +104,10 @@ services:
     image: mongo-express:1.0.2-20-alpine3.19
     restart: unless-stopped
     healthcheck:
-      test: [ 'CMD-SHELL', 'wget -O - http://0.0.0.0:8081/services/mongo-express/status | grep "{\"status\":\"ok\"}"' ]
+      test: [ 'CMD-SHELL', 'wget -O - http://0.0.0.0:8081/mongo-express/ui/status | grep "{\"status\":\"ok\"}"' ]
     environment:
       ME_CONFIG_MONGODB_URL: mongodb://${MONGO_USERNAME:-admin}:${MONGO_PASSWORD:-password}@mongo1:27017,mongo2:27017,mongo3:27017?replicaSet=rs0
-      ME_CONFIG_SITE_BASEURL: /services/mongo-express
+      ME_CONFIG_SITE_BASEURL: /mongo-express/ui
       ME_CONFIG_BASICAUTH_USERNAME: ${MONGO_EXPRESS_USERNAME:-admin}
       ME_CONFIG_BASICAUTH_PASSWORD: ${MONGO_EXPRESS_PASSWORD:-password}
     networks:

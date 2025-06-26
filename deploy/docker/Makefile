@@ -50,11 +50,11 @@ up.stable: .env.stable.exists
 		-f ./bricks/rabbitmq.yaml      \
 		-f ./bricks/manager.yaml       \
 		-f ./bricks/worker.yaml        \
+		-f ./bricks/web.yaml           \
 		-f ./bricks/reverse-proxy.yaml \
 		--env-file ./envs/stable/.env  \
 		up               \
 		--detach         \
-		--force-recreate \
 		--remove-orphans \
 		--scale worker=3
 

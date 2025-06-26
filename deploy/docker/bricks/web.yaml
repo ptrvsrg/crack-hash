@@ -1,0 +1,29 @@
+version: "3.8"
+
+services:
+  web:
+    build:
+      context: ../../web
+      dockerfile: Dockerfile
+    image: ghcr.io/ptrvsrg/crack-hash:web-${WEB_ARTIFACT_VERSION:-latest}
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD-SHELL", "curl --fail http://localhost:80 || exit 1" ]
+    volumes:
+      - ./envs/${ENVIRONMENT:-stable}/web/appConfig.json:/usr/share/nginx/html/assets/config/appConfig.json:ro
+    networks:
+      - net
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "0.3"
+          memory: "250M"
+        reservations:
+          cpus: "0.1"
+          memory: "100M"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

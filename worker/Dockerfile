@@ -25,7 +25,7 @@ RUN apk --no-cache update \
         gcc \
         git \
         musl-dev \
-        sed
+        perl
 RUN go generate ./...
 RUN go mod download
 

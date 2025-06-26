@@ -10,7 +10,7 @@ on:
 permissions:
   contents: read
 jobs:
-  lint:
+  dependency:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,6 +20,32 @@ jobs:
           node-version: 23.6.0
           cache: yarn
           cache-dependency-path: web/yarn.lock
+      - name: Install dependencies
+        uses: borales/actions-yarn@v4
+        with:
+          cmd: install --frozen-lockfile
+          dir: web
+      - name: Upload dependencies
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependencies
+          path: web/node_modules
+  lint:
+    needs: dependency
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 23.6.0
+          cache: yarn
+          cache-dependency-path: web/yarn.lock
+      - name: Download dependencies
+        uses: actions/download-artifact@v4
+        with:
+          name: dependencies
+          path: web/node_modules
       - name: Eslint
         uses: borales/actions-yarn@v4
         with:
@@ -36,6 +62,7 @@ jobs:
           cmd: type-check
           dir: web
   build:
+    needs: lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -45,6 +72,11 @@ jobs:
           node-version: 23.6.0
           cache: yarn
           cache-dependency-path: web/yarn.lock
+      - name: Download dependencies
+        uses: actions/download-artifact@v4
+        with:
+          name: dependencies
+          path: web/node_modules
       - name: Build
         uses: borales/actions-yarn@v4
         env:

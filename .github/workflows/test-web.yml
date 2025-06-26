@@ -78,12 +78,10 @@ jobs:
           cmd: global add vite
           dir: web
       - name: Build
-        uses: borales/actions-yarn@v4
         env:
           NODE_ENV: production
-        with:
-          cmd: build-only
-          dir: web
+        working-directory: web
+        run: vite build
       - name: Upload build
         uses: actions/upload-artifact@v4
         with:

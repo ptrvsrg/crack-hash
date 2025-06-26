@@ -1,0 +1,56 @@
+name: Test - WEB
+on:
+  push:
+    paths:
+      - 'web/**'
+  pull_request:
+    paths:
+      - 'web/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 23.6.0
+          cache: yarn
+          cache-dependency-path: web/yarn.lock
+      - name: Eslint
+        uses: borales/actions-yarn@v4
+        with:
+          cmd: lint:eslint
+      - name: Oxlint
+        uses: borales/actions-yarn@v4
+        with:
+          cmd: lint:oxlint
+      - name: Typecheck
+        uses: borales/actions-yarn@v4
+        with:
+          cmd: type-check
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 23.6.0
+          cache: yarn
+          cache-dependency-path: web/yarn.lock
+      - name: Build
+        uses: borales/actions-yarn@v4
+        env:
+          NODE_ENV: production
+        with:
+          cmd: build
+          dir: web
+      - name: Upload build
+        uses: actions/upload-artifact@v3
+        with:
+          name: build
+          path: web/dist

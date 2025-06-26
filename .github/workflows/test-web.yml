@@ -41,21 +41,16 @@ jobs:
           node-version: 23.6.0
           cache: yarn
           cache-dependency-path: web/yarn.lock
-      - name: Download dependencies
-        uses: actions/download-artifact@v4
-        with:
-          name: dependencies
-          path: web/node_modules
       - name: Install dependencies
         uses: borales/actions-yarn@v4
         with:
-          cmd: global add eslint
+          cmd: install --frozen-lockfile
           dir: web
       - name: ESLint
-        uses: sibiraj-s/action-eslint@v3
+        uses: borales/actions-yarn@v4
         with:
-          working-directory: web
-          ignore-path: web/.gitignore
+          cmd: lint:eslint
+          dir: web
   build:
     needs: lint
     runs-on: ubuntu-latest
@@ -67,21 +62,18 @@ jobs:
           node-version: 23.6.0
           cache: yarn
           cache-dependency-path: web/yarn.lock
-      - name: Download dependencies
-        uses: actions/download-artifact@v4
-        with:
-          name: dependencies
-          path: web/node_modules
       - name: Install dependencies
         uses: borales/actions-yarn@v4
         with:
-          cmd: global add vite
+          cmd: install --frozen-lockfile
           dir: web
       - name: Build
+        uses: borales/actions-yarn@v4
         env:
           NODE_ENV: production
-        working-directory: web
-        run: vite build
+        with:
+          cmd: build
+          dir: web
       - name: Upload build
         uses: actions/upload-artifact@v4
         with:

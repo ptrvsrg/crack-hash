@@ -156,6 +156,53 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/hash/crack/metadatas": {
+            "get": {
+                "description": "Request for getting metadatas of hash crack tasks",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Hash Crack API"
+                ],
+                "summary": "Get metadatas of hash crack tasks",
+                "operationId": "GetTaskMetadatas",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Limit",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Offset",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.HashCrackTaskMetadatasOutput"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorOutput"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorOutput"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/hash/crack/status": {
             "get": {
                 "description": "Request for getting status of hash crack task",
@@ -290,6 +337,51 @@ const docTemplate = `{
                     "type": "integer",
                     "maximum": 6,
                     "minimum": 1
+                }
+            }
+        },
+        "model.HashCrackTaskMetadataOutput": {
+            "type": "object",
+            "required": [
+                "createdAt",
+                "hash",
+                "maxLength",
+                "requestId"
+            ],
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "hash": {
+                    "type": "string"
+                },
+                "maxLength": {
+                    "type": "integer",
+                    "maximum": 6,
+                    "minimum": 1
+                },
+                "requestId": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.HashCrackTaskMetadatasOutput": {
+            "type": "object",
+            "required": [
+                "count",
+                "tasks"
+            ],
+            "properties": {
+                "count": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "tasks": {
+                    "type": "array",
+                    "minItems": 0,
+                    "items": {
+                        "$ref": "#/definitions/model.HashCrackTaskMetadataOutput"
+                    }
                 }
             }
         },

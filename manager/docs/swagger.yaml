@@ -64,6 +64,38 @@ definitions:
     - hash
     - maxLength
     type: object
+  model.HashCrackTaskMetadataOutput:
+    properties:
+      createdAt:
+        type: string
+      hash:
+        type: string
+      maxLength:
+        maximum: 6
+        minimum: 1
+        type: integer
+      requestId:
+        type: string
+    required:
+    - createdAt
+    - hash
+    - maxLength
+    - requestId
+    type: object
+  model.HashCrackTaskMetadatasOutput:
+    properties:
+      count:
+        minimum: 0
+        type: integer
+      tasks:
+        items:
+          $ref: '#/definitions/model.HashCrackTaskMetadataOutput'
+        minItems: 0
+        type: array
+    required:
+    - count
+    - tasks
+    type: object
   model.HashCrackTaskStatusOutput:
     properties:
       data:
@@ -194,6 +226,37 @@ paths:
           schema:
             $ref: '#/definitions/model.ErrorOutput'
       summary: Create new hash crack task
+      tags:
+      - Hash Crack API
+  /v1/hash/crack/metadatas:
+    get:
+      description: Request for getting metadatas of hash crack tasks
+      operationId: GetTaskMetadatas
+      parameters:
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.HashCrackTaskMetadatasOutput'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorOutput'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorOutput'
+      summary: Get metadatas of hash crack tasks
       tags:
       - Hash Crack API
   /v1/hash/crack/status:

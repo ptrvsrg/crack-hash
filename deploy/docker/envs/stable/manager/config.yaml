@@ -1,6 +1,20 @@
 server:
   port: 8080
   env: dev
+  cors:
+    allowedOrigins:
+      - "*"
+    allowedMethods:
+      - GET
+      - POST
+      - PUT
+      - PATCH
+      - DELETE
+      - OPTIONS
+    allowedHeaders:
+      - "*"
+    allowCredentials: false
+    maxAge: 24h
 mongodb:
   uri: mongodb://mongo1:27017,mongo2:27017,mongo3:27017/?replicaSet=rs0
   username: admin

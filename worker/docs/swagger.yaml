@@ -1,0 +1,103 @@
+consumes:
+- application/json
+definitions:
+  model.ErrorOutput:
+    properties:
+      message:
+        type: string
+      path:
+        example: /api/v0/example
+        format: url_path
+        type: string
+      status:
+        maximum: 599
+        minimum: 400
+        type: integer
+      timestamp:
+        type: string
+    required:
+    - message
+    - path
+    - status
+    - timestamp
+    type: object
+externalDocs:
+  description: OpenAPI
+  url: https://swagger.io/resources/open-api/
+host: localhost:8080
+info:
+  contact:
+    email: s.petrov1@g.nsu.ru
+    name: Petrov Sergey
+  description: API for Crack Hash Worker
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+  title: Crack Hash Worker API
+  version: 0.0.0
+paths:
+  /health/liveness:
+    get:
+      description: Request for getting health liveness.
+      operationId: healthLiveness
+      responses:
+        "200":
+          description: OK
+      summary: Health liveness
+      tags:
+      - Health API
+  /health/readiness:
+    get:
+      description: Request for getting health readiness. In response will be status
+        of all check (database, cache, message queue).
+      operationId: healthReadiness
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/model.ErrorOutput'
+      summary: Health readiness
+      tags:
+      - Health API
+  /swagger/api-docs.json:
+    get:
+      description: Request for getting swagger specification in JSON
+      operationId: SwaggerJSON
+      produces:
+      - application/json; charset=utf-8
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: Swagger JSON
+      tags:
+      - Swagger API
+  /swagger/index.html:
+    get:
+      description: Request for getting swagger UI
+      operationId: SwaggerUI
+      produces:
+      - text/html; charset=utf-8
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: Swagger UI
+      tags:
+      - Swagger API
+produces:
+- application/json
+swagger: "2.0"
+tags:
+- description: API for cracking hashes and sending results
+  name: Hash Crack Task API
+- description: API for health checks
+  name: Health API
+- description: API for getting swagger specification
+  name: Swagger API

@@ -27,6 +27,17 @@ var (
 			healthcheckCmd,
 			versionCmd,
 		},
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:        "config",
+				Aliases:     []string{"c"},
+				Usage:       "Load configuration from `FILE`",
+				HideDefault: false,
+				Required:    false,
+				Local:       true,
+				Value:       "config.yaml",
+			},
+		},
 	}
 )
 

@@ -27,7 +27,7 @@ func NewHandler(logger zerolog.Logger, svc domain.Health) handler.Handler {
 func (h *hdlr) RegisterRoutes(r *gin.Engine) {
 	h.logger.Debug().Msgf("register routes")
 
-	api := r.Group("/api/worker/health")
+	api := r.Group("/health")
 	{
 		api.GET("/readiness", h.handleHealthReadiness)
 		api.GET("/liveness", h.handleHealthLiveness)
@@ -43,7 +43,7 @@ func (h *hdlr) RegisterRoutes(r *gin.Engine) {
 //	@Produce		application/json
 //	@Success		200
 //	@Failure		503	{object}	model.ErrorOutput
-//	@Router			/api/manager/health/readiness [get]
+//	@Router			/health/readiness [get]
 func (h *hdlr) handleHealthReadiness(ctx *gin.Context) {
 	h.logger.Debug().Msg("handle health readiness")
 
@@ -62,7 +62,7 @@ func (h *hdlr) handleHealthReadiness(ctx *gin.Context) {
 //	@Description	Request for getting health liveness.
 //	@Tags			Health API
 //	@Success		200
-//	@Router			/api/manager/health/liveness [get]
+//	@Router			/health/liveness [get]
 func (h *hdlr) handleHealthLiveness(ctx *gin.Context) {
 	h.logger.Debug().Msg("handle health liveness")
 	ctx.String(200, "OK")

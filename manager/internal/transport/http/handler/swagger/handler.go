@@ -24,7 +24,7 @@ func NewHandler(logger zerolog.Logger) handler.Handler {
 func (h *hdlr) RegisterRoutes(router *gin.Engine) {
 	h.logger.Debug().Msg("register swagger routes")
 
-	swaggerRouter := router.Group("/api/manager/swagger")
+	swaggerRouter := router.Group("/swagger")
 	{
 		swaggerRouter.GET("/api-docs.json", h.getAPIDocJSON)
 		swaggerRouter.GET("/index.html", h.getUI)
@@ -39,7 +39,7 @@ func (h *hdlr) RegisterRoutes(router *gin.Engine) {
 //	@Tags			Swagger API
 //	@Produce		text/html; charset=utf-8
 //	@Success		200	{object}	string
-//	@Router			/api/manager/swagger/index.html [get]
+//	@Router			/swagger/index.html [get]
 func (h *hdlr) getUI(ctx *gin.Context) {
 	h.logger.Debug().Msg("get swagger UI")
 
@@ -57,7 +57,7 @@ func (h *hdlr) getUI(ctx *gin.Context) {
 //	@Tags			Swagger API
 //	@Produce		application/json; charset=utf-8
 //	@Success		200	{object}	string
-//	@Router			/api/manager/swagger/api-docs.json [get]
+//	@Router			/swagger/api-docs.json [get]
 func (h *hdlr) getAPIDocJSON(ctx *gin.Context) {
 	h.logger.Debug().Msg("get swagger JSON")
 

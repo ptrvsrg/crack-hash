@@ -1,0 +1,10 @@
+releases:
+  - name: mongodb
+    chart: bitnami/mongodb
+    version: { { .StateValues.charts.versions.mongodb } }
+    namespace: { { .Environment.Name } }
+    values:
+      - envs/default/values/mongodb.yaml
+      - envs/{{ .Environment.Name }}/values/mongodb.yaml
+#    secrets:
+#      - envs/{{ .Environment.Name }}/secret.yaml

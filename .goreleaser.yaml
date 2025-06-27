@@ -1,5 +1,11 @@
 version: 2
 project_name: crack-hash
+before:
+  hooks:
+    - yarn --cwd web install --frozen-lockfile
+    - yarn --cwd web build
+    - go generate ./...
+    - go mod download
 builds:
   - id: manager
     dir: ./manager
@@ -56,6 +62,14 @@ archives:
     files:
       - README.md
       - LICENSE.md
+source:
+  enabled: true
+  format: zip
+  name_template: >-
+    {{ .ProjectName }}_web_{{ .Version }}
+  files:
+    - src: web/dist/*
+      dst: web
 checksum:
   name_template: "{{ .ProjectName }}_{{ .Version }}_checksums.txt"
 changelog:

@@ -1,6 +1,20 @@
 server:
   port: 8080
   env: dev
+  cors:
+    allowedOrigins:
+      - "*"
+    allowedMethods:
+      - GET
+      - POST
+      - PUT
+      - PATCH
+      - DELETE
+      - OPTIONS
+    allowedHeaders:
+      - "*"
+    allowCredentials: false
+    maxAge: 24h
 amqp:
   uris:
   username:

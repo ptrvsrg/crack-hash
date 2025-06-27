@@ -11,9 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        service:
-          - manager
-          - worker
+        service: [ { name: manager, context: . }, { name: worker, context: . }, { name: web, context: ./web } ]
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -27,22 +25,22 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.ACCESS_TOKEN }}
-      - name: Build and push ${{ matrix.service }} image
+      - name: Build and push ${{ matrix.service.name }} image
         uses: docker/build-push-action@v4
         with:
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          context: .
-          file: ./${{ matrix.service }}/Dockerfile
+          context: ${{ matrix.service.context }}
+          file: ./${{ matrix.service.name }}/Dockerfile
           platforms: |
             linux/amd64
             linux/arm64
             linux/arm/v7
           tags: |
-            ghcr.io/ptrvsrg/crack-hash:${{ matrix.service }}-${{ github.ref_name }}
+            ghcr.io/ptrvsrg/crack-hash:${{ matrix.service.name }}-${{ github.ref_name }}
           labels: |
             org.opencontainers.image.title=${{ github.repository }}
-            org.opencontainers.image.description=Crack Hash - ${{ matrix.service }}
+            org.opencontainers.image.description=Crack Hash - ${{ matrix.service.name }}
             org.opencontainers.image.url=https://github.com/ptrvsrg/crack-hash
             org.opencontainers.image.source=https://github.com/ptrvsrg/crack-hash
             org.opencontainers.image.version=${{ github.ref_name }}

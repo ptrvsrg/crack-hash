@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
+
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"time"
 
 	"github.com/rs/zerolog"
 	"go.mongodb.org/mongo-driver/bson"
@@ -93,6 +94,34 @@ func (r *repo) WithTransaction(ctx context.Context, fn func(ctx context.Context)
 	return result, nil
 }
 
+func (r *repo) GetAll(ctx context.Context, limit, offset int, withSubtasks bool) (
+	[]*entity.HashCrackTaskWithSubtasks, error,
+) {
+	r.logger.Debug().
+		Int("limit", limit).
+		Int("offset", offset).
+		Bool("with-subtasks", withSubtasks).
+		Msg("get all")
+
+	opts := options.Find().
+		SetLimit(int64(limit)).
+		SetSkip(int64(offset)).
+		SetSort(bson.M{"createdAt": 1})
+
+	return r.findAll(ctx, bson.M{}, withSubtasks, opts)
+}
+
+func (r *repo) CountAll(ctx context.Context) (int64, error) {
+	r.logger.Debug().Msg("count all")
+
+	count, err := r.collection.CountDocuments(ctx, bson.M{})
+	if err != nil {
+		return 0, fmt.Errorf("failed to count documents: %w", err)
+	}
+
+	return count, nil
+}
+
 func (r *repo) GetByHashAndMaxLength(
 	ctx context.Context, hash string, maxLength int, withSubtasks bool,
 ) (*entity.HashCrackTaskWithSubtasks, error) {
@@ -136,7 +165,9 @@ func (r *repo) GetAllFinished(ctx context.Context, withSubtasks bool) ([]*entity
 	return r.findAll(ctx, filter, withSubtasks, opts)
 }
 
-func (r *repo) GetAllExpired(ctx context.Context, maxAge time.Duration, withSubtasks bool) ([]*entity.HashCrackTaskWithSubtasks, error) {
+func (r *repo) GetAllExpired(
+	ctx context.Context, maxAge time.Duration, withSubtasks bool,
+) ([]*entity.HashCrackTaskWithSubtasks, error) {
 	r.logger.Debug().
 		Dur("max-age", maxAge).
 		Bool("with-subtasks", withSubtasks).

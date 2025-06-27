@@ -33,7 +33,7 @@ var (
 func healthcheck(_ context.Context, command *cli.Command) error {
 	host := command.String("host")
 
-	resp, err := resty.R().Get(fmt.Sprintf("http://%s/api/worker/health/readiness", host))
+	resp, err := resty.R().Get(fmt.Sprintf("http://%s/health/readiness", host))
 	if err != nil {
 		return fmt.Errorf("%w: %w", errHealthcheckFailed, err)
 	}

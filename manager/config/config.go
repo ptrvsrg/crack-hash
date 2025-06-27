@@ -24,6 +24,15 @@ type (
 	ServerConfig struct {
 		Env  Env `default:"dev" validate:"required,oneof=dev prod"`
 		Port int `default:"8080" validate:"required,min=-1,max=65535"`
+		Cors CorsConfig
+	}
+
+	CorsConfig struct {
+		AllowedOrigins   []string      `default:"[\"*\"]"`
+		AllowedMethods   []string      `default:"[\"GET\", \"POST\", \"PUT\", \"PATCH\", \"DELETE\", \"OPTIONS\"]"`
+		AllowedHeaders   []string      `default:"[\"*\"]"`
+		AllowCredentials bool          `default:"false"`
+		MaxAge           time.Duration `default:"24h"`
 	}
 
 	MongoDBConfig struct {

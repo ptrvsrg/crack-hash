@@ -6,7 +6,7 @@ db.createCollection("hash_crack_subtasks", {
     validator: {
         $jsonSchema: {
             bsonType: "object",
-            required: ["_id", "taskId", "partNumber", "data", "percent", "status", "createdAt"],
+            required: ["_id", "taskId", "partNumber", "data", "percent", "status", "createdAt", "updatedAt"],
             properties: {
                 _id: {
                     bsonType: "objectId",
@@ -69,7 +69,7 @@ db.createCollection("hash_crack_tasks", {
     validator: {
         $jsonSchema: {
             bsonType: "object",
-            required: ["_id", "hash", "maxLength", "partCount", "subtaskIds", "status", "createdAt", "updatedAt"],
+            required: ["_id", "hash", "maxLength", "partCount", "status", "createdAt", "updatedAt"],
             properties: {
                 _id: {
                     bsonType: "objectId",

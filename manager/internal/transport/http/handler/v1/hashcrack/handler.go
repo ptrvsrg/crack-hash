@@ -32,9 +32,10 @@ func NewHandler(logger zerolog.Logger, svc domain.HashCrackTask) handler.Handler
 func (h *hdlr) RegisterRoutes(r *gin.Engine) {
 	h.logger.Debug().Msg("register routes")
 
-	exAPI := r.Group("/api/manager/hash/crack")
+	exAPI := r.Group("/v1/hash/crack")
 	{
 		exAPI.POST("", h.handleCreateTask)
+		exAPI.GET("/metadatas", h.handleGetTaskMetadatas)
 		exAPI.GET("/status", h.handleGetTaskStatus)
 	}
 }
@@ -51,7 +52,7 @@ func (h *hdlr) RegisterRoutes(r *gin.Engine) {
 //	@Success		202 {object} model.HashCrackTaskIDOutput
 //	@Failure		400 {object} model.ErrorOutput
 //	@Failure		500 {object} model.ErrorOutput
-//	@Router			/api/manager/hash/crack [post]
+//	@Router			/v1/hash/crack [post]
 func (h *hdlr) handleCreateTask(ctx *gin.Context) {
 	h.logger.Debug().Msg("handle create task")
 
@@ -75,6 +76,37 @@ func (h *hdlr) handleCreateTask(ctx *gin.Context) {
 	ctx.JSON(202, output)
 }
 
+// handleGetTaskMetadatas godoc
+//
+//	@Id				GetTaskMetadatas
+//	@Summary	    Get metadatas of hash crack tasks
+//	@Description	Request for getting metadatas of hash crack tasks
+//	@Tags			Hash Crack API
+//	@Produce		application/json
+//	@Param			limit	query	int	false	"Limit"
+//	@Param			offset	query	int	false	"Offset"
+//	@Success		200 {object} model.HashCrackTaskMetadatasOutput
+//	@Failure		400 {object} model.ErrorOutput
+//	@Failure		500 {object} model.ErrorOutput
+//	@Router			/v1/hash/crack/metadatas [get]
+func (h *hdlr) handleGetTaskMetadatas(c *gin.Context) {
+	h.logger.Debug().Msg("handle get task metadatas")
+
+	input := &model.HashCrackTaskMetadataInput{}
+	if err := c.ShouldBindQuery(input); err != nil {
+		_ = helper.ErrorWithStatus(c, http.StatusBadRequest, err)
+		return
+	}
+
+	output, err := h.svc.GetTaskMetadatas(c, input.Limit, input.Offset)
+	if err != nil {
+		_ = helper.ErrorWithStatus(c, http.StatusInternalServerError, err)
+		return
+	}
+
+	c.JSON(200, output)
+}
+
 // handleGetTaskStatus godoc
 //
 //	@Id				CheckHashCrackStatus
@@ -87,7 +119,7 @@ func (h *hdlr) handleCreateTask(ctx *gin.Context) {
 //	@Failure		400 {object} model.ErrorOutput
 //	@Failure		404 {object} model.ErrorOutput
 //	@Failure		500 {object} model.ErrorOutput
-//	@Router			/api/manager/hash/crack/status [get]
+//	@Router			/v1/hash/crack/status [get]
 func (h *hdlr) handleGetTaskStatus(c *gin.Context) {
 	h.logger.Debug().Msg("handle get task status")
 

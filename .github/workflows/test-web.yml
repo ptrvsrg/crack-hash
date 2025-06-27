@@ -1,0 +1,86 @@
+name: Test - WEB
+on:
+  push:
+    paths:
+      - 'web/**'
+  pull_request:
+    paths:
+      - 'web/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  dependency:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 23.6.0
+          cache: yarn
+          cache-dependency-path: web/yarn.lock
+      - name: Install dependencies
+        uses: borales/actions-yarn@v4
+        with:
+          cmd: install --frozen-lockfile --network-timeout=300000
+          dir: web
+      - name: Upload dependencies
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependencies
+          path: web/node_modules
+  lint:
+    needs: dependency
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 23.6.0
+          cache: yarn
+          cache-dependency-path: web/yarn.lock
+      - name: Install dependencies
+        uses: borales/actions-yarn@v4
+        with:
+          cmd: install --frozen-lockfile --network-timeout=300000
+          dir: web
+      - name: ESLint
+        uses: borales/actions-yarn@v4
+        with:
+          cmd: lint:eslint
+          dir: web
+      - name: OXLint
+        uses: borales/actions-yarn@v4
+        with:
+          cmd: lint:oxlint
+          dir: web
+  build:
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 23.6.0
+          cache: yarn
+          cache-dependency-path: web/yarn.lock
+      - name: Install dependencies
+        uses: borales/actions-yarn@v4
+        with:
+          cmd: install --frozen-lockfile --network-timeout=300000
+          dir: web
+      - name: Build
+        uses: borales/actions-yarn@v4
+        env:
+          NODE_ENV: production
+        with:
+          cmd: build
+          dir: web
+      - name: Upload build
+        uses: actions/upload-artifact@v4
+        with:
+          name: build
+          path: web/dist

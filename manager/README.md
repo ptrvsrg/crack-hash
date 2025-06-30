@@ -39,6 +39,20 @@ YAML file (for example [`config/config.default.yaml`](./config/config.default.ya
 server:
   port: 8080
   env: dev
+  cors:
+    allowedOrigins:
+      - "*"
+    allowedMethods:
+      - GET
+      - POST
+      - PUT
+      - PATCH
+      - DELETE
+      - OPTIONS
+    allowedHeaders:
+      - "*"
+    allowCredentials: false
+    maxAge: 24h
 mongodb:
   uri:
   username:
@@ -69,6 +83,7 @@ task:
   timeout: 1h
   limit: 10
   maxage: 24h
+  restartdelay: 1m
   finishdelay: 1m
 ```
 
@@ -79,6 +94,11 @@ CONFIG_FILE=config/config.yaml
 
 SERVER_PORT=8080
 SERVER_ENV=dev
+SERVER_CORS_ALLOWEDORIGINS=*
+SERVER_CORS_ALLOWEDMETHODS=GET,POST,PUT,PATCH,DELETE,OPTIONS
+SERVER_CORS_ALLOWEDHEADERS=*
+SERVER_CORS_ALLOWCREDENTIALS=false
+SERVER_CORS_MAXAGE=24h
 
 MONGODB_URI=
 MONGODB_USERNAME=

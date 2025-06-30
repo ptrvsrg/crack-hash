@@ -22,6 +22,7 @@ See [arch.drawio](./.assets/arch.drawio)
 ### Requirements
 
 - Golang 1.24.2
+- Node 23.6.0
 - Docker
 - Docker Compose
 - Make (optional)
@@ -42,7 +43,7 @@ docker compose -f ./deploy/docker/docker-compose.stable.yaml up -d --force-recre
 
 #### Manually
 
-See [manager](./manager/README.md) and [worker](./worker/README.md)
+See [manager](./manager/README.md), [worker](./worker/README.md) and [web](./web/README.md) READMEs
 
 ## License
 

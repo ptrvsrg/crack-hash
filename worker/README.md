@@ -107,7 +107,6 @@ Available commands:
   build                 - Build the application
   build-image           - Build the docker image
   run                   - Run the application (set the COMMAND environment variable to change the command, default is 'server')
-  swagger               - Generate Swagger specification
   mock                  - Generate mocks
   lint                  - Lint the application
   test                  - Test the application

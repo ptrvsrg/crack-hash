@@ -23,14 +23,6 @@ run:
 	@echo "Running..."
 	@go run ./cmd/cli $(COMMAND)
 
-# Generate Swagger spec
-swagger:
-	@echo "Generating swagger..."
-	@go install github.com/swaggo/swag/cmd/swag@latest
-	@swag init --parseDependency --generalInfo ./internal/transport/http/router.go --outputTypes go,yaml --output ./docs
-	sed -i '' 's/github_com_ptrvsrg_crack-hash_manager_pkg_//g' ./docs/docs.go
-	sed -i '' 's/github_com_ptrvsrg_crack-hash_manager_pkg_//g' ./docs/swagger.yaml
-
 # Generate mocks
 mock:
 	@echo "Generating mocks..."
@@ -75,7 +67,6 @@ watch:
 	@echo "  build   		- Build the application"
 	@echo "  build-image		- Build the docker image"
 	@echo "  run     		- Run the application (set the COMMAND environment variable to change the command, default is 'server')"
-	@echo "  swagger 		- Generate Swagger specification"
 	@echo "  mock			- Generate mocks"
 	@echo "  lint    		- Lint the application"
 	@echo "  test    		- Test the application"

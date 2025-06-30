@@ -4,8 +4,9 @@ before:
   hooks:
     - yarn --cwd web install --frozen-lockfile
     - yarn --cwd web build
-    - go generate ./...
-    - go mod download
+    - cd commonlib && go generate ./... && go mod download && cd ..
+    - cd manager && go generate ./... && go mod download && cd ..
+    - cd worker && go generate ./... && go mod download && cd ..
 builds:
   - id: manager
     dir: ./manager

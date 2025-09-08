@@ -16,7 +16,7 @@ require (
 	github.com/urfave/cli/v3 v3.3.8
 	go.mongodb.org/mongo-driver v1.17.4
 	go.uber.org/multierr v1.11.0
-	golang.org/x/sync v0.15.0
+	golang.org/x/sync v0.17.0
 	gopkg.in/resty.v1 v1.12.0
 )
 
